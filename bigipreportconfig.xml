@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 	<!--Leave the version information intact-->
-	<Settings version="4.3.3">
+	<Settings version="4.4.1">
 	
 		<!-- 
 		***************************************************************************
@@ -55,7 +55,7 @@
 		*	Which folder to store the generated report in. Can be a local path or a network path.
 		*
 		*	Examples
-		*	<ReportRoot>D:\Inetput\wwwroot\</ReportRoot>
+		*	<ReportRoot>D:\Inetpub\wwwroot\</ReportRoot>
 		*	or
 		*	<ReportRoot>\\aserver.domain.local\wwwshare$\</ReportRoot>
 		*
@@ -242,7 +242,6 @@
 			*	<Columns>
 			*		<ShowPersistence>false</ShowPersistence>
 			*		<ShowCompressionProfile>true</ShowCompressionProfile>
-            *       <ShowASMPolicyBlockingMode>false</ShowASMPolicyBlockingMode>
 			*	<Columns>
 			*
 			**************************************************************************************************************************************
@@ -251,7 +250,6 @@
 		<Columns>
 			<ShowPersistence>true</ShowPersistence>
 			<ShowCompressionProfile>true</ShowCompressionProfile>
-            <ShowASMPolicyBlockingMode>false</ShowASMPolicyBlockingMode>
 		</Columns>		
 				
 		<!--
