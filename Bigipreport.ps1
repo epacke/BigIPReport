@@ -277,7 +277,7 @@ Function Send-Errors {
 				color:#ffffff;
 			}
 			.error {
-				color:red;					  
+				color:red;
 			}
 
 		</style>
