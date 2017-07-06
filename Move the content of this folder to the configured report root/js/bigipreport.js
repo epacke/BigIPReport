@@ -253,7 +253,7 @@ $(window).load(function() {
 
 			highlightAll(oTable);
 			
-			setPoolTableCellWidth();
+			
 			hidePools();
 
 			if(localStorage.getItem("showAdcLinks") === "false"){
@@ -265,6 +265,8 @@ $(window).load(function() {
 			if(oTable.search() != ""){
 				expandPoolMatches(body, oTable.search());
 			}
+
+			setPoolTableCellWidth();
 					
 		} );
 		
@@ -519,26 +521,28 @@ function setPoolTableCellWidth(){
 
 	var maxwidth=0
 	$('.poolname').each(function(i, obj) {
-		if(obj.offsetWidth>maxwidth){
-			maxwidth=obj.offsetWidth
+		if(obj.offsetWidth > maxwidth){
+			maxwidth = obj.offsetWidth
 		}
 	});
 
+	console.log("Pool name Max-width:" + maxwidth)
+
 	$('.poolname').each(function(i, obj) {
-		if(obj.offsetWidth<maxwidth){
+		if(obj.offsetWidth < maxwidth){
 			obj.style.width = maxwidth
 		}
 	});
 
 	var maxwidth=0
 	$('.PoolMember').each(function(i, obj) {
-		if(obj.offsetWidth>maxwidth){
-			maxwidth=obj.offsetWidth
+		if(obj.offsetWidth > maxwidth){
+			maxwidth = obj.offsetWidth
 		}
 	});
 
 	$('.PoolMember').each(function(i, obj) {
-		if(obj.offsetWidth<maxwidth){
+		if(obj.offsetWidth < maxwidth){
 			obj.style.width = maxwidth
 		}
 	});
