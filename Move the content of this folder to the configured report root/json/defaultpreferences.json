@@ -1,4 +1,4 @@
 {
-	"autoExpandPools" : false,
+	"autoExpandPools" : true,
 	"showAdcLinks" : false
 }
