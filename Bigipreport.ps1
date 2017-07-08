@@ -113,7 +113,7 @@
 #		4.2.9		2016-09-12		Showing persistence profile in virtual server details						Patrik Jonsson
 #		4.3.0		2016-01-10		Fixing support for partitions single configuration objects
 #		4.3.1		2017-03-02		Removing any route domain before comparing to NAT list						Patrik Jonsson
-#		4.3.2		2017-03-02		Making the script do recursive calls instead of per partition. Much faster. Patrik Jonsson
+#		4.3.2		2017-03-02		Making the script do recursive calls instead of per partition. Much faster Patrik Jonsson
 #		4.3.3		2017-03-02		Adding basic ASM support													Patrik Jonsson
 #		4.3.4		2017-03-07		Fixing a mistake where the wrong column setting was referred				Patrik Jonsson
 #		4.3.5		2017-03-23		Improving the check for missing data										Patrik Jonsson
@@ -123,6 +123,7 @@
 #		4.3.9		2017-04-06		Allowing orphaned objects in the JSON, fixing a bug when testing data		Patrik Jonsson
 #		4.4.0		2017-06-21		Fixing issue with the API not returning empty irules						Patrik Jonsson
 #		4.4.1		2017-07-05		Removing ASM, adding preferences											Patrik Jonsson
+#		4.4.2		2017-07-08		Adding new logo and version number in the footer							Patrik Jonsson
 #
 #		To do:
 #		Add reset filters
@@ -140,6 +141,9 @@
 ######################################################################################################################################
 
 Set-StrictMode -Version 1.0
+
+#Script version
+$Global:ScriptVersion = "4.4.2"
 
 #Variable for storing handled errors
 $Global:LoggedErrors = @()
@@ -1874,7 +1878,7 @@ $Global:html += @"
 			<br>
 			<font size=-1>
 				<i>
-					The report was generated on $($env:computername) and started to generate at <span id="Generationtime">$starttime</span>. It took $([int]($(Get-Date)-$starttime).totalminutes) minutes to generate. 
+					The report was generated on $($env:computername) using BigIP Report version $($Global:ScriptVersion). Script started at <span id="Generationtime">$starttime</span> and took $([int]($(Get-Date)-$starttime).totalminutes) minutes to finish. 
 				</i>
 			</font>
 
