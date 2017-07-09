@@ -393,18 +393,44 @@ function showPreferences(){
 	//Prepare the header
 	$("#firstlayerdetailsheader").html("BigIP Report Preferences")
 
-	//Prepare the content
-	var settingsContent = "<table>";
+	//Set the footer
+	$('.firstlayerdetailsfooter').html("<a class=\"lightboxbutton\" href=\"javascript:void(0);\" onClick=\"javascript:$('.lightbox').fadeOut();\">Close preferences</a>");
 
+	//Prepare the content
+	var settingsContent = "<table class=\"settingsTable\">";
+
+	settingsContent += "<thead>";
+	settingsContent += "<tr><th colspan=2>Generic settings</th>";
+	settingsContent += "</thead>";
+	
+	settingsContent += "<tbody>";
 	settingsContent += "<tr><td>Expand all pool members</td><td><input type=\"checkbox\" id=\"autoExpandPools\"></td></tr>";
 	settingsContent += "<tr><td>Direct links to Big-IP objects</td><td><input type=\"checkbox\" id=\"adcLinks\"></td></tr>";
-	
+	settingsContent += "</tbody>";
+
 	settingsContent += "</table>"
+
+	settingsContent += "<table class=\"settingsTable\">";
+	settingsContent += "<thead>";
+	settingsContent += "<tr><th colspan=2>Toggle columns</th>";
+	settingsContent += "</thead>";
 	
-	settingsContent += "<br><br><br><a class=\"lightboxbutton\" href=\"javascript:void(0);\" onClick=\"javascript:$('.lightbox').fadeOut();\">Close virtual server details</a>";
+	settingsContent += "<tbody>";
+
+	$("#allbigips thead th input").each(function(){
+		console.log($(this).attr("data-column-name"));
+		settingsContent += "<tr><td>" + $(this).attr("data-column-name") + "</td><td><input type=\"checkbox\" id=\"\"></td></tr>";   
+	});
+
+	settingsContent += "</tbody>";
+
+	settingsContent += "</table>"
+
+
 
 	//Populate the content
 	$("#firstlayerdetailscontentdiv").html(settingsContent);
+
 
 	//Populate the settings according to the local storage or default settings of none exist
 	$("#autoExpandPools").prop("checked", localStorage.getItem("autoExpandPools") === "true");
