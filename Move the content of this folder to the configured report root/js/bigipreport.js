@@ -166,20 +166,11 @@ $(window).load(function() {
 		**************************************************************************************************************/	
 		
 		$("#allbigips_filter").append('<a href="javascript:void(0);" onMouseClick="" onMouseOver="javascript:showShareLink()" class="sharelink">Share search<p>CTRL + C to copy<br><input id="sharelink" value=""></p></a>');
-		$("#allbigips_filter").append("<input type=\"checkbox\" id=\"autoExpandPools\">Expand all pool members <input type=\"checkbox\" id=\"adcLinks\"> Direct links to Big-IP objects");
-		
-		$("#autoExpandPools").prop("checked", localStorage.getItem("autoExpandPools") === "true");
-		$("#adcLinks").prop("checked", localStorage.getItem("showAdcLinks") === "true");
+		$("#allbigips_filter").append("<a id=\"preferencesButton\" class=\"preferencesButton\" href=\"javascript:void(0);\">Site preferences</a>")
 
-		$("#autoExpandPools").on("click", function(){
-				localStorage.setItem("autoExpandPools", this.checked);
-				oTable.draw();
-		});
+		$("#preferencesButton").on("click", showPreferences);
 
-		$("#adcLinks").on("click", function(){
-				localStorage.setItem("showAdcLinks", this.checked);
-				oTable.draw();
-		});
+
 		
 		/*************************************************************************************************************
 		
@@ -395,6 +386,46 @@ function populateSearchParameters(oTable){
 		}
 		
 	}
+}
+
+function showPreferences(){
+
+	//Prepare the header
+	$("#firstlayerdetailsheader").html("BigIP Report Preferences")
+
+	//Prepare the content
+	var settingsContent = "<table>";
+
+	settingsContent += "<tr><td>Expand all pool members</td><td><input type=\"checkbox\" id=\"autoExpandPools\"></td></tr>";
+	settingsContent += "<tr><td>Direct links to Big-IP objects</td><td><input type=\"checkbox\" id=\"adcLinks\"></td></tr>";
+	
+	settingsContent += "</table>"
+	
+	settingsContent += "<br><br><br><a class=\"lightboxbutton\" href=\"javascript:void(0);\" onClick=\"javascript:$('.lightbox').fadeOut();\">Close virtual server details</a>";
+
+	//Populate the content
+	$("#firstlayerdetailscontentdiv").html(settingsContent);
+
+	//Populate the settings according to the local storage or default settings of none exist
+	$("#autoExpandPools").prop("checked", localStorage.getItem("autoExpandPools") === "true");
+	$("#adcLinks").prop("checked", localStorage.getItem("showAdcLinks") === "true");
+
+	//Event handler for auto expand pools
+	$("#autoExpandPools").on("click", function(){
+			console.log("te");
+			localStorage.setItem("autoExpandPools", this.checked);
+			oTable.draw();
+	});
+
+	//Event handler for showing ADC edit links
+	$("#adcLinks").on("click", function(){
+			localStorage.setItem("showAdcLinks", this.checked);
+			oTable.draw();
+	});
+
+	//Show the first light box layer
+	$("#firstlayerdiv").fadeIn();
+
 }
 
 function generateShareLink(){
@@ -785,7 +816,7 @@ function showVirtualServerDetails(virtualserver, loadbalancer){
 			}
 		} 
 	}
-	$('.firstlayerdetailsfooter').html('<a class="closelightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'.lightbox\').fadeOut();">Close virtual server details</a>');
+	$('.firstlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'.lightbox\').fadeOut();">Close virtual server details</a>');
 	$("#firstlayerdetailscontentdiv").html(table);
 	$("#firstlayerdiv").fadeIn();
 
@@ -861,7 +892,7 @@ function showiRuleDetails(irule, loadbalancer){
 	}
 	
 	//Add the close button to the footer
-	$('.secondlayerdetailsfooter').html('<a class="closelightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'#secondlayerdetailsdiv\').fadeOut()">Close irule details</a>');
+	$('.secondlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'#secondlayerdetailsdiv\').fadeOut()">Close irule details</a>');
 	//Add the div content to the page
 	$("#secondlayerdetailscontentdiv").html(divcontent);
 	//Add syntax highlighting
@@ -1083,12 +1114,11 @@ function showDataGroupListDetails(datagrouplist, loadbalancer){
 
 	}
 	
-	$('#secondlayerdetailsfooter').html('<a class="closelightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'#secondlayerdetailsdiv\').fadeOut()">Close data group list details</a>');
+	$('#secondlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'#secondlayerdetailsdiv\').fadeOut()">Close data group list details</a>');
 	$("#secondlayerdetailscontentdiv").html(divcontent);
 	$("#secondlayerdetailsdiv").fadeIn();
 
 }
-
 
 
 /**********************************************************************************************************************
@@ -1143,7 +1173,7 @@ function showPoolDetails(pool, loadbalancer){
 		table += '</tbody></table>';
 		table += '<br>';
 		
-		//table += '<div class="closelightboxbuttonholder"><a href="javascript:void(0);" onMouseClick="" onMouseOver="javascript:showShareLink()" class="sharelink"><button>Share search</button><p>CTRL + C to copy<br><input id="sharelink" value=""></p></a></div><br>'
+		//table += '<div class="lightboxbuttonholder"><a href="javascript:void(0);" onMouseClick="" onMouseOver="javascript:showShareLink()" class="sharelink"><button>Share search</button><p>CTRL + C to copy<br><input id="sharelink" value=""></p></a></div><br>'
 		
 		if(matchingmonitors.length > 0){
 			
@@ -1232,7 +1262,7 @@ function showPoolDetails(pool, loadbalancer){
 		}
 		
 		
-		$('#firstlayerdetailsfooter').html('<a class="closelightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'.lightbox\').fadeOut()">Close pool details</a><a href="javascript:void(0);" onMouseClick="" onMouseOver="javascript:showPoolShareLink(\'' + pool +'@' + loadbalancer + '\')" class="sharepoollink">Share pool details<p>CTRL + C to copy<br><input id="sharepoollink" value=""></p></a>');
+		$('#firstlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'.lightbox\').fadeOut()">Close pool details</a><a href="javascript:void(0);" onMouseClick="" onMouseOver="javascript:showPoolShareLink(\'' + pool +'@' + loadbalancer + '\')" class="sharepoollink">Share pool details<p>CTRL + C to copy<br><input id="sharepoollink" value=""></p></a>');
 
 	}
 
