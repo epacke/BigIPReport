@@ -124,13 +124,11 @@
 #		4.4.0		2017-06-21		Fixing issue with the API not returning empty irules						Patrik Jonsson
 #		4.4.1		2017-07-05		Removing ASM, adding preferences											Patrik Jonsson
 #		4.4.2		2017-07-08		Adding new logo and version number in the footer							Patrik Jonsson
+#		4.4.3		2017-07-09		Moved preferences to its own window 										Patrik Jonsson
 #
 #		To do:
 #		Add reset filters
-#		Make data gathering parallel instead of serial (if possible to do in a nice way)
-#		Add auto-expand as a choice
 #       Fix a css-only loader
-#		Fix a new logo
 #
 #		This script generates a report of the LTM configuration on F5 BigIP's.
 #		It started out as pet project to help co-workers know which traffic goes where but grew.
