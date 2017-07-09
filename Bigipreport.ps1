@@ -1603,29 +1603,29 @@ $Global:html += @'
 		<table id="allbigips" class="bigiptable">
 			<thead>
 				<tr>
-					<th><input type="text" name="load_balancer" value="Load balancer" class="search_init" /></th>
-					<th><input type="text" name="vip_name" value="VIP Name" class="search_init" /></th>
-					<th><input type="text" name="ip_port" value="IP:Port" class="search_init" /></th>
+					<th><input type="text" name="load_balancer" value="Load balancer" class="search_init" data-column-name="Load balancer"/></th>
+					<th><input type="text" name="vip_name" value="VIP Name" class="search_init" data-column-name="Virtual server"/></th>
+					<th><input type="text" name="ip_port" value="IP:Port" class="search_init" data-column-name="IP:Port" /></th>
 '@
 
 	
 $Global:html += @'
-					<th><input type="text" name="ssl_profile" size=6 value="SSL" class="search_init" /></th>
+					<th><input type="text" name="ssl_profile" size=6 value="SSL" class="search_init" data-column-name="SSL Profile" /></th>
 '@
 	
 	if($Global:Bigipreportconfig.Settings.Columns.ShowCompressionProfile -eq $true){
 		$Global:html += @'
-					<th><input type="text" name="compression_profile" size=32 value="Compr" class="search_init" /></th>
+					<th><input type="text" name="compression_profile" size=32 value="Compr" class="search_init" data-column-name="Compression Profile"/></th>
 '@
 	}
 	if($Global:Bigipreportconfig.Settings.Columns.ShowPersistence -eq $true) { 
 		$Global:html += @'
-					<th><input type="text" name="persistence_profile" size=30 value="Persistence" class="search_init" /></th>
+					<th><input type="text" name="persistence_profile" size=30 value="Persistence" class="search_init" data-column-name="Persistence Profile" /></th>
 '@
 	}
 	
 	$Global:html += @'
-					<th><input type="text" name="pool_members" value="Pool/Members" class="search_init" /></th>
+					<th><input type="text" name="pool_members" value="Pool/Members" class="search_init" data-column-name="Pools/Members" /></th>
 				</tr>
 			</thead>
 			<tbody>
