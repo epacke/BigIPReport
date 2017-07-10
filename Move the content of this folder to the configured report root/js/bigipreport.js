@@ -170,6 +170,44 @@ $(window).load(function() {
 
 		$("#preferencesButton").on("click", showPreferences);
 
+		$("#allbigips_filter").append("<span id=\"toggleHeader\">Toggle columns:<span><span id=\"columnToggleButtons\"></span>")
+
+		$("#allbigips thead th input").each(function(){
+
+			var columnID = $(this).attr("data-setting-name");
+
+			var toggleLinkData = "";
+
+
+			console.log(localStorage.getItem(columnID) === "true");
+			if(localStorage.getItem(columnID) === "true"){
+				buttonClass = "visibleColumnButton";
+			} else {
+				buttonClass = "hiddenColumnButton";
+			}
+
+			toggleLinkData += "<a href=\"javascript:void(0)\" class=\"" + buttonClass + "\" id=\"" + columnID + "\">" + $(this).attr("data-column-name") + "</a>";
+
+			$("#allbigips_filter").append(toggleLinkData);
+
+			$("#" + columnID).on("click", function(){
+
+				var preferenceName = $(this).attr("id")
+
+				if(localStorage.getItem(preferenceName) === "false"){
+					$(this).addClass("visibleColumnButton").removeClass("hiddenColumnButton");
+					localStorage.setItem(preferenceName, "true");
+				} else {
+					$(this).addClass("hiddenColumnButton").removeClass("visibleColumnButton");
+					localStorage.setItem(preferenceName, "false");		
+				}
+
+				toggleColumns();
+
+			});
+
+		});
+
 		/*************************************************************************************************************
 		
 			This section adds the update check button div and initiates the update checks
@@ -244,6 +282,7 @@ $(window).load(function() {
 			
 			
 			hidePools();
+			toggleColumns();
 
 			if(localStorage.getItem("showAdcLinks") === "false"){
 				$(".adcLinkSpan").hide();
@@ -403,25 +442,7 @@ function showPreferences(){
 	settingsContent += "<tr><td>Direct links to Big-IP objects</td><td><input type=\"checkbox\" id=\"adcLinks\"></td></tr>";
 	settingsContent += "</tbody>";
 
-	settingsContent += "</table>"
-
-	settingsContent += "<table class=\"settingsTable\">";
-	settingsContent += "<thead>";
-	settingsContent += "<tr><th colspan=2>Toggle columns</th>";
-	settingsContent += "</thead>";
-	
-	settingsContent += "<tbody>";
-
-	$("#allbigips thead th input").each(function(){
-		var columnID = $(this).attr("data-setting-name");
-		settingsContent += "<tr><td>" + $(this).attr("data-column-name") + "</td><td><input type=\"checkbox\" id=\"" + columnID + "\" class=\"columToggle\"></td></tr>";
-	});
-
-	settingsContent += "</tbody>";
-
-	settingsContent += "</table>"
-
-
+	settingsContent += "</table>";
 
 	//Populate the content
 	$("#firstlayerdetailscontentdiv").html(settingsContent);
@@ -457,8 +478,6 @@ function showPreferences(){
 	$("#firstlayerdiv").fadeIn();
 
 }
-
-
 
 function toggleColumns(){
 
