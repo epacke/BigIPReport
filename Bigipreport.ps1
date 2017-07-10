@@ -1622,13 +1622,10 @@ $Global:html += @'
 
 	}
 
-	if($Global:Bigipreportconfig.Settings.Columns.ShowPersistence -eq $true) { 
-		
 		$Global:html += @'
 
 					<th><input type="text" name="persistence_profile" size=30 value="Persistence" class="search_init" data-column-name="Persistence Profile" data-setting-name="showPersistenceProfileColumn"/></th>
 '@
-	}
 	
 $Global:html += @'
 
@@ -1736,14 +1733,12 @@ foreach($LoadbalancerName in $BigIPDict.values){
 			}	
 		}
 		
-		if($Global:Bigipreportconfig.Settings.Columns.ShowPersistence -eq $true){
-			$Global:html += @"
-						
-						<td>
-							$($vs.persistence)
-						</td>
+		$Global:html += @"
+					
+					<td>
+						$($vs.persistence)
+					</td>
 "@
-		}
 
 		if(!($vs.pools | ?{ !($Global:Bigipreportconfig.Settings.PoolExceptions.PoolException -contains $_) })){
 			$Global:html += @"
