@@ -170,8 +170,6 @@ $(window).load(function() {
 
 		$("#preferencesButton").on("click", showPreferences);
 
-
-		
 		/*************************************************************************************************************
 		
 			This section adds the update check button div and initiates the update checks
@@ -276,10 +274,6 @@ $(window).load(function() {
 			
 		} );
 		
-
-
-
-		
 		/*************************************************************************************************************
 		
 			If any search parameters has been sent, populate the search
@@ -289,6 +283,7 @@ $(window).load(function() {
 		//Make sure that all pools are hidden 
 		populateSearchParameters(oTable);
 		oTable.draw();
+
 	});
 });
 
@@ -418,8 +413,8 @@ function showPreferences(){
 	settingsContent += "<tbody>";
 
 	$("#allbigips thead th input").each(function(){
-		console.log($(this).attr("data-column-name"));
-		settingsContent += "<tr><td>" + $(this).attr("data-column-name") + "</td><td><input type=\"checkbox\" id=\"\"></td></tr>";   
+		var columnID = $(this).attr("data-setting-name");
+		settingsContent += "<tr><td>" + $(this).attr("data-column-name") + "</td><td><input type=\"checkbox\" id=\"" + columnID + "\" class=\"columToggle\"></td></tr>";
 	});
 
 	settingsContent += "</tbody>";
@@ -431,14 +426,12 @@ function showPreferences(){
 	//Populate the content
 	$("#firstlayerdetailscontentdiv").html(settingsContent);
 
-
 	//Populate the settings according to the local storage or default settings of none exist
 	$("#autoExpandPools").prop("checked", localStorage.getItem("autoExpandPools") === "true");
 	$("#adcLinks").prop("checked", localStorage.getItem("showAdcLinks") === "true");
 
 	//Event handler for auto expand pools
 	$("#autoExpandPools").on("click", function(){
-			console.log("te");
 			localStorage.setItem("autoExpandPools", this.checked);
 			oTable.draw();
 	});
@@ -449,10 +442,43 @@ function showPreferences(){
 			oTable.draw();
 	});
 
+	//Make sure that the check boxes are checked according to the settings
+	$("#allbigips thead th input").each(function(){
+		var columnID = $(this).attr("data-setting-name");
+		$("#" + columnID).prop("checked", localStorage.getItem(columnID) === "true");
+	});
+
+	$(".columToggle").on("click", function(){
+		localStorage.setItem(this.getAttribute("id"), this.checked);
+		toggleColumns();
+	});
+
 	//Show the first light box layer
 	$("#firstlayerdiv").fadeIn();
 
 }
+
+
+
+function toggleColumns(){
+
+	$("#allbigips thead th input").each(function(index, tHeader){
+
+		var settingName = tHeader.getAttribute("data-setting-name");
+		index += 1
+
+		if(localStorage.getItem(settingName) === "false"){
+			$(this).parent().hide();
+			$("#allbigips tbody tr.virtualserverrow td:nth-child(" + index + "\)").hide();
+		} else {
+			$(this).parent().show();
+			$("#allbigips tbody tr.virtualserverrow td:nth-child(" + index + "\)").show();
+		}
+
+	});
+
+}
+
 
 function generateShareLink(){
 	
@@ -1298,7 +1324,9 @@ function showPoolDetails(pool, loadbalancer){
 }
 
 function loadPreferences(){
+	
 	for(var k in defaultPreferences){
 		if(localStorage.getItem(k) === null){ localStorage.setItem(k, defaultPreferences[k]) }
 	}
+
 }
