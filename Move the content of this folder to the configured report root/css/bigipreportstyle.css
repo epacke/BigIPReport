@@ -700,13 +700,17 @@ a:hover.sharelink p input {
 ***********************************************************************************************************************************/
 
 
+table.settingsTable {
+	margin: 0 auto;
+	width: 70%;
+}
 
-.settingsTable thead tr th, tbody td {
+table.settingsTable thead tr th, tbody td {
 	border:0px;
 	font-family: "Arial";
 }
 
-.settingsTable tbody tr:nth-child(odd) td {
+table.settingsTable tbody tr:nth-child(odd) td {
 	background-color: #EEF5FB;
 	border-collapse: collapse;
 	width:1px;
@@ -921,13 +925,15 @@ span.adcLinkSpan a:hover {
   background-image: -ms-linear-gradient(top, #3498db, #2980b9);
   background-image: -o-linear-gradient(top, #3498db, #2980b9);
   background-image: linear-gradient(to bottom, #3498db, #2980b9);
-  -webkit-border-radius: 28;
+  /*-webkit-border-radius: 28;
   -moz-border-radius: 28;
   border-radius: 28px;
+  */
   font-family: Arial;
   color: #ffffff;
   font-size: 12px;
   padding: 4px 8px 4px 8px;
+  margin-left: 5px;
   text-decoration: none;
 }
 
@@ -948,13 +954,15 @@ span.adcLinkSpan a:hover {
   background-image: -ms-linear-gradient(top, #f5f5f5, #c2c2c2);
   background-image: -o-linear-gradient(top, #f5f5f5, #c2c2c2);
   background-image: linear-gradient(to bottom, #f5f5f5, #c2c2c2);
-  -webkit-border-radius: 28;
+  /*-webkit-border-radius: 28;
   -moz-border-radius: 28;
   border-radius: 28px;
+  */
   font-family: Arial;
   color: #383838;
   font-size: 12px;
   padding: 4px 8px 4px 8px;
+  margin-left: 5px;
   text-decoration: none;
 }
 
@@ -966,4 +974,10 @@ span.adcLinkSpan a:hover {
   background-image: -o-linear-gradient(top, #ebebeb, #e8e8e8);
   background-image: linear-gradient(to bottom, #ebebeb, #e8e8e8);
   text-decoration: none;
+}
+
+#toggleHeader {
+	font-family: Arial;
+	font-weight: bold;
+	margin-left: 50px;
 }

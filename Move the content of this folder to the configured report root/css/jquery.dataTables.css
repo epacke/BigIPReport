@@ -285,6 +285,7 @@ table.dataTable td {
   margin-left:15px;
   float: left;
   text-align: left;
+  font-family: Arial;
 }
 .dataTables_wrapper .dataTables_filter input {
   margin-left: 0.5em;
@@ -404,6 +405,8 @@ table.dataTable td {
 .dataTables_wrapper .dataTables_processing,
 .dataTables_wrapper .dataTables_paginate {
   color: #333;
+  font-family: Arial;
+  margin-left: 21px;
 }
 .dataTables_wrapper .dataTables_scroll {
   clear: both;

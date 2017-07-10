@@ -178,8 +178,6 @@ $(window).load(function() {
 
 			var toggleLinkData = "";
 
-
-			console.log(localStorage.getItem(columnID) === "true");
 			if(localStorage.getItem(columnID) === "true"){
 				buttonClass = "visibleColumnButton";
 			} else {
@@ -188,7 +186,7 @@ $(window).load(function() {
 
 			toggleLinkData += "<a href=\"javascript:void(0)\" class=\"" + buttonClass + "\" id=\"" + columnID + "\">" + $(this).attr("data-column-name") + "</a>";
 
-			$("#allbigips_filter").append(toggleLinkData);
+			$("#columnToggleButtons").append(toggleLinkData);
 
 			$("#" + columnID).on("click", function(){
 
@@ -443,6 +441,8 @@ function showPreferences(){
 	settingsContent += "</tbody>";
 
 	settingsContent += "</table>";
+
+	settingsContent += "</div>";
 
 	//Populate the content
 	$("#firstlayerdetailscontentdiv").html(settingsContent);
