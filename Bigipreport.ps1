@@ -1113,7 +1113,7 @@ Function Get-DefinedRules {
 
 		$tempRule = @{}
 
-		$tempRule.add("LoadBalancer", $Rule.LoadBalancer)
+		$tempRule.add("loadBalancer", $Rule.loadBalancer)
 		$tempRule.add("iRuleName", $Rule.iRuleName)
 
 		$ruleObj += $tempRule
