@@ -137,26 +137,6 @@ $(window).load(function() {
 			}
 		} );
 		
-		/*************************************************************************************************************
-		
-			This section handles the irule selection dropdown initiation and the syntax highlighting
-		
-		**************************************************************************************************************/	
-
-		$("#allbigips_filter").append($("#iRuleSelectiondiv").html());
-		$("#iRuleSelectiondiv").html("");
-		
-		//Initiate chosen (the searchable dropdown used for displaying irules
-		$(".iRuleDropdown").chosen();
-		
-		/* Handles when someone chooses an element from the dropdown dropbox */
-		//$('#iRuleDropdown').live('change', function () {
-		$('#iRuleDropdown').change(function(){
-			var irulediv = "#" + $(this).val();
-			$(irulediv).show();
-			$(irulediv).children().center();
-		});
-		
 		/* Initiate the syntax highlighting for irules*/
 		sh_highlightDocument('/js/', '.js');
 		

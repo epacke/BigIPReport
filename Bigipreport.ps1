@@ -1119,7 +1119,12 @@ Function Get-DefinedRules {
 		$ruleObj += $tempRule
 	}
 
-	$ruleObj | ConvertTo-Json
+	if($ruleObj.count -eq 0){
+		"[]"
+	} else {
+		$ruleObj | ConvertTo-Json
+	}
+
 }
 
 #EndRegion
@@ -1399,8 +1404,11 @@ Function Write-TemporaryFiles {
 		#Since rules has been disabled, only write those defined
 		$ruleScope = $Global:irules | Where-Object { $_.name -in $Bigipreportconfig.Settings.iRules.iRule.iRuleName -and $_.loadbalancer -in $Bigipreportconfig.Settings.iRules.iRule.loadbalancer }
 
-		$StreamWriter.Write($($ruleScope | ConvertTo-Json -Compress -Depth 5))
-		
+		if($ruleScope.count -eq 0){
+			$StreamWriter.Write("[]")
+		} else {
+			$StreamWriter.Write($($ruleScope | ConvertTo-Json -Compress -Depth 5))
+		}
 		if(!$?){ 
 			log error "Failed to update the temporary irules json file"	
 			$Status  = $false
@@ -1414,7 +1422,7 @@ Function Write-TemporaryFiles {
 		log info "Writing temporary data group list json object to $($Global:datagrouplistjsonpath + ".tmp")"
 		
 		$StreamWriter = New-Object System.IO.StreamWriter($($Global:datagrouplistjsonpath + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
-		$StreamWriter.Write($($Global:DataGroupLists | ConvertTo-Json -Compress -Depth 5))
+		$StreamWriter.Write("[]")
 		
 		if(!$?){ 
 			log error "Failed to update the temporary data group lists json file"	
@@ -1425,7 +1433,7 @@ Function Write-TemporaryFiles {
 		log info "Data group list links disabled in config. Writing empty json object to $($Global:datagrouplistjsonpath + ".tmp")"
 		
 		$StreamWriter = New-Object System.IO.StreamWriter($($Global:datagrouplistjsonpath + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
-		$StreamWriter.Write($(@("") | ConvertTo-Json -Compress -Depth 5))
+		$StreamWriter.Write("[]")
 		
 		if(!$?){ 
 			log error "Failed to update the temporary data group lists json file"	
