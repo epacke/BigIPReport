@@ -393,17 +393,6 @@ if($Global:Bigipreportconfig.Settings.Outputlevel -eq $null -or $Global:Bigiprep
 	$SaneConfig = $false
 }
 
-if($Global:Bigipreportconfig.Settings.iRulesdropdown -ne $null -and $Global:Bigipreportconfig.Settings.iRulesdropdown.iRule -ne $null -and $Global:Bigipreportconfig.Settings.iRulesdropdown.iRule -ne ""){
-	
-	#Check if the iRules list contains rules which does not have a configured load balancer
-	[array]$InvalidIrules = ($Global:Bigipreportconfig.Settings.iRulesdropdown.iRule | ForEach-Object { $_.Split("/")[0] }) | Where-Object { $Global:Bigipreportconfig.Settings.Loadbalancers.Loadbalancer -notcontains $_  }
-	
-	if($InvalidIrules.Count -ne 0){
-		log error "iRules that does not reside in a configured load balancer has been defined in the iRules section of the config"
-		$SaneConfig = $false
-	}
-}
-
 Foreach($Share in $Global:Bigipreportconfig.Settings.Shares.Share){
 	
 	log info "Mounting $($Share.Path)"
@@ -1141,114 +1130,6 @@ Function Translate-Status {
 }
 #Endregion
 
-#Region Function generate-irules
-function generate-iRules{
-
-	if(($Global:bigipreportconfig.Settings.iRulesdropdown.iRule | where { $_ -ne "" }).Count -gt 0){
-		
-		log info "Adding configured iRule denfinitions to the body"
-		
-		Foreach($rule in $Global:bigipreportconfig.Settings.iRulesdropdown.iRule){
-		
-				$bigipirulesarr = $rule.split("/")
-				$bigipname = $BigipDict[$bigipirulesarr[0]]
-				$bigippartition = $bigipirulesarr[1]
-				$irulename = $bigipirulesarr[2]
-				$ruleobject = $irules | Where-Object { $_.name -eq "/$bigippartition/$irulename" -and $_.loadbalancer -eq $bigipname}
-						
-				if($ruleobject.count -eq 0){
-					#No rule found, throw error to log
-					log error "iRule $irulename could not be found amongst the indexed irules."
-				} elseif($ruleobject.count -gt 1){
-					#More than one rule found (should be impossible...), throw error to log
-					log error "More than one iRule with the name $irulename was found, skipping"
-				} else {
-					log success "Adding iRule $irulename to the body"
-					$iruledefinition = $ruleobject.definition
-			
-				@"
-	<div class="lightbox" id="$((($bigipname.replace("-","")).replace(".","")) + $(($irulename.replace("-","")).replace(".","")))div">
-					
-		<div class="innerLightbox">
-			<div class="iRulesContent">
-				<div class="iRuleheader">
-					$irulename
-					</div>
-					<pre class="sh_tcl">
-						$iruledefinition
-					</pre>
-				</div>
-			</div>
-		</div>
-"@
-			}
-		}
-	} else {
-		log info "No iRule links to add to the dropdown"
-	}
-
-}
-#Endregion
-
-#Region Function Test-Version
-
-Function Test-Version {
-	Param([string]$Version)
-	
-	
-
-}
-
-#EndRegion
-
-#Region Function generate-irule-links
-function generate-irule-links(){
-
-	if(($Global:bigipreportconfig.Settings.iRulesdropdown.iRule | where { $_ -ne "" }).Count -gt 0){
-		
-		$iRuletable = @"
-		
-		<select data-placeholder="Choose an iRule" class="iRuleDropdown" id="iRuleDropdown" tabindex="2">
-		<option value=""></option>
-"@
-		
-		Foreach($rule in $Global:bigipreportconfig.Settings.iRulesdropdown.iRule){
-			
-				$bigipirulesarr = $rule.split("/")
-				$bigipname = $BigipDict[$bigipirulesarr[0]]
-				$bigippartition = $bigipirulesarr[1]
-				$irulename = $bigipirulesarr[2]
-				
-				$ruleobject = $irules | Where-Object { $_.name -eq "/$bigippartition/$irulename" -and $_.loadbalancer -eq $bigipname}
-				
-				if($ruleobject.count -eq 0){
-					#No rule found, throw error to log
-					log error "iRule $irulename could not be found amongst the indexed irules."
-				} elseif($ruleobject.count -gt 1){
-					#More than one rule found (should be impossible...), throw error to log
-					log error "More than one iRule with the name $irulename was found, skipping"
-				} else {
-					log info "Adding link to $irulename to the iRules dropdown"
-					$iRuletable += @"
-				<option value="$($bigipname.replace("-","").replace(".","") + $irulename.replace("-","").replace(".",""))div">$bigipname - $irulename</option>
-"@
-			}
-		}
-		
-		$iRuletable += @"
-
-		</select>			
-"@
-		
-		Return $iRuletable
-	} else {
-		log info "No iRule definitions to add to the body"
-	}
-
-}
-
-#endregion
-
 #Region Call Cache LTM information
 foreach($LoadbalancerIP in $Global:Bigipreportconfig.Settings.Loadbalancers.Loadbalancer) { 
 	
@@ -1885,12 +1766,9 @@ $Global:html += @"
 		</div>
 "@
 
-#Generate the divs containing the iRule definitions
-$Global:html += generate-iRules
 
 $Global:html += @"
-	<div id=iRuleSelectiondiv style="display:none;float:left">$(generate-irule-links)</div>
-	
+
 	<div class="lightbox" id="firstlayerdiv">
 		<div id="firstlayerdetailsheader" class="firstlayerdetailsheader"></div>
 		<div class="innerLightbox">

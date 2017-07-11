@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 	<!--Leave the version information intact-->
-	<Settings version="4.4.1">
+	<Settings version="4.3.3">
 	
 		<!-- 
 		***************************************************************************
@@ -150,30 +150,6 @@
 		
 		
 		<!--
-		**************************************************************************************************************************************
-		*
-		*	This variable defines individual iRules you want to display together with the report, for instance to show pool selections.
-		*	
-		*	Note:
-		*	The load balancer hosting the defined irules must be indexed (configured in the <Loadbalancers> section above)
-		*
-		*	Format:
-		*	"IP/partition/irulename"
-		*
-		*	Example:
-		*	<iRulesdropdown>
-		*		<iRule>10.10.10.1/Common/anIrulename</iRule>
-		*		<iRule>192.168.1.1/Finance/dividebyzero_irule</iRule>
-		*		<iRule>192.168.1.1/Finance/redirectstuff_irule</iRule>
-		*	</iRulesdropdown>
-		*
-		**************************************************************************************************************************************
-		-->
-		
-		<iRulesdropdown>
-		</iRulesdropdown>
-		
-		<!--
 			**************************************************************************************************************************************
 			*
 			*	Pool exceptions contains pools you don't want shown in the report, for instance any syslog pools.
@@ -233,25 +209,6 @@
 		
 		<UseTLS12>true</UseTLS12>
 		
-		<!--
-			**************************************************************************************************************************************
-			*
-			*	In this section you can choose which columns to show. To show, set to true. To hide, set to false.
-			*
-			*	Example:
-			*	<Columns>
-			*		<ShowPersistence>false</ShowPersistence>
-			*		<ShowCompressionProfile>true</ShowCompressionProfile>
-			*	<Columns>
-			*
-			**************************************************************************************************************************************
-		-->
-		
-		<Columns>
-			<ShowPersistence>true</ShowPersistence>
-			<ShowCompressionProfile>true</ShowCompressionProfile>
-		</Columns>		
-				
 		<!--
 			**************************************************************************************************************************************
 			*
