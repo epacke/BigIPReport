@@ -157,14 +157,13 @@
 	white-space:nowrap;
 }
 
-.virtualserverdetailstable tbody > tr:nth-child(odd) > td {
-	background-color:#EEF5FB;
-	border-collapse: collapse;
-	border:1px solid #CBCBCB;
-}
-/****************************************************************************************************************************
-	This section contains the style for the pool details lightbox div
-*****************************************************************************************************************************/
+.virtualserverdetailstable tbody > tr:nth-child(odd) > td {     background-
+color:#6890B2;     border-collapse: collapse;     border:1px solid #CBCBCB; }
+/*****************************************************************************
+***********************************************     This section contains the
+style for the pool details lightbox div **************************************
+******************************************************************************
+*********/
 
 /*Header with the pool name */
 
@@ -702,12 +701,12 @@ a:hover.sharelink p input {
 
 table.settingsTable {
 	margin: 0 auto;
-	width: 70%;
+	width: 50%;
 }
 
 table.settingsTable thead tr th, tbody td {
 	border:0px;
-	font-family: "Arial";
+	font-family: "Calibri";
 }
 
 table.settingsTable tbody tr:nth-child(odd) td {
@@ -893,11 +892,11 @@ a:hover.tooltip p {
 
 span.adcLinkSpan a {
   background: #da212f;
-  background-image: -webkit-linear-gradient(top, #da212f, #ab252f);
-  background-image: -moz-linear-gradient(top, #da212f, #ab252f);
-  background-image: -ms-linear-gradient(top, #da212f, #ab252f);
-  background-image: -o-linear-gradient(top, #da212f, #ab252f);
-  background-image: linear-gradient(to bottom, #da212f, #ab252f);
+  background-image: -webkit-linear-gradient(top, #99173C, #B93057);
+  background-image: -moz-linear-gradient(top, #99173C, #B93057);
+  background-image: -ms-linear-gradient(top, #99173C, #B93057);
+  background-image: -o-linear-gradient(top, #99173C, #B93057);
+  background-image: linear-gradient(to bottom, #99173C, #B93057);
   -webkit-border-radius: 28;
   -moz-border-radius: 28;
   border-radius: 28px;
@@ -910,21 +909,21 @@ span.adcLinkSpan a {
 
 span.adcLinkSpan a:hover {
   background: #c92330;
-  background-image: -webkit-linear-gradient(top, #c92330, #911b25);
-  background-image: -moz-linear-gradient(top, #c92330, #911b25);
-  background-image: -ms-linear-gradient(top, #c92330, #911b25);
-  background-image: -o-linear-gradient(top, #c92330, #911b25);
-  background-image: linear-gradient(to bottom, #c92330, #911b25);
+  background-image: -webkit-linear-gradient(top, #B93057, #D05276);
+  background-image: -moz-linear-gradient(top, #B93057, #D05276);
+  background-image: -ms-linear-gradient(top, #B93057, #D05276);
+  background-image: -o-linear-gradient(top, #B93057, #D05276);
+  background-image: linear-gradient(to bottom, #B93057, #D05276);
   text-decoration: none;
 }
 
 .visibleColumnButton {
   background: #3498db;
-  background-image: -webkit-linear-gradient(top, #3498db, #2980b9);
-  background-image: -moz-linear-gradient(top, #3498db, #2980b9);
-  background-image: -ms-linear-gradient(top, #3498db, #2980b9);
-  background-image: -o-linear-gradient(top, #3498db, #2980b9);
-  background-image: linear-gradient(to bottom, #3498db, #2980b9);
+  background-image: -webkit-linear-gradient(top, #347502, #347502);
+  background-image: -moz-linear-gradient(top, #347502, #347502);
+  background-image: -ms-linear-gradient(top, #347502, #347502);
+  background-image: -o-linear-gradient(top, #347502, #347502);
+  background-image: linear-gradient(to bottom, #347502, #347502);
   /*-webkit-border-radius: 28;
   -moz-border-radius: 28;
   border-radius: 28px;
@@ -939,11 +938,11 @@ span.adcLinkSpan a:hover {
 
 .visibleColumnButton:hover {
   background: #3cb0fd;
-  background-image: -webkit-linear-gradient(top, #3cb0fd, #3498db);
-  background-image: -moz-linear-gradient(top, #3cb0fd, #3498db);
-  background-image: -ms-linear-gradient(top, #3cb0fd, #3498db);
-  background-image: -o-linear-gradient(top, #3cb0fd, #3498db);
-  background-image: linear-gradient(to bottom, #3cb0fd, #3498db);
+  background-image: -webkit-linear-gradient(top, #4F9717, #4F9717);
+  background-image: -moz-linear-gradient(top, #4F9717, #4F9717);
+  background-image: -ms-linear-gradient(top, #4F9717, #4F9717);
+  background-image: -o-linear-gradient(top, #4F9717, #4F9717);
+  background-image: linear-gradient(to bottom, #4F9717, #4F9717);
   text-decoration: none;
 }
 
@@ -979,5 +978,4 @@ span.adcLinkSpan a:hover {
 #toggleHeader {
 	font-family: Arial;
 	font-weight: bold;
-	margin-left: 50px;
 }

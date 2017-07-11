@@ -99,7 +99,8 @@ $(window).load(function() {
 			"iDisplayLength": 15,
 			"oLanguage": {
 				"sSearch": "Search all columns:"
-			}
+			},
+			"dom": '<"top">frt<"bottom"ilp><"clear">'
 		} );
 		
 		
@@ -170,7 +171,7 @@ $(window).load(function() {
 
 		$("#preferencesButton").on("click", showPreferences);
 
-		$("#allbigips_filter").append("<span id=\"toggleHeader\">Toggle columns:<span><span id=\"columnToggleButtons\"></span>")
+		$("#allbigips_filter").append("<div style=\"float:right\"><span id=\"toggleHeader\">Toggle columns:<span><span id=\"columnToggleButtons\"></span></div>")
 
 		$("#allbigips thead th input").each(function(){
 
@@ -213,7 +214,7 @@ $(window).load(function() {
 		**************************************************************************************************************/	
 		
 		//Add the div containing the update available button
-		$("#allbigips_filter").after($('<div id="updateavailablediv"></div>'));
+		$("#preferencesButton").after($('<span id="updateavailablespan"></span>'));
 		
 		//Check if there's a new update every 30 minutes
 		setInterval(function(){
@@ -230,11 +231,11 @@ $(window).load(function() {
 
 					if( timesincerefresh > 240){
 						if(timesincelatestgeneration > 5){
-							$("#updateavailablediv").html('<a href="javascript:document.location.reload()" class="criticalupdateavailable">Report update available</a>');
+							$("#updateavailablespan").html('<a href="javascript:document.location.reload()" class="criticalupdateavailable">Report update available</a>');
 						}
 					} else if ( timesincerefresh != 0){
 						if(timesincelatestgeneration > 5){
-							$("#updateavailablediv").html('<a href="javascript:document.location.reload()" class="updateavailable">Report update available</a>');
+							$("#updateavailablespan").html('<a href="javascript:document.location.reload()" class="updateavailable">Report update available</a>');
 						}
 					}
 
