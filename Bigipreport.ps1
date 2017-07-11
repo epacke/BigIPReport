@@ -1101,6 +1101,30 @@ function cacheLTMinformation {
 
 #EndRegion
 
+#Region Function Get-iRules
+	
+Function Get-DefinedRules {
+
+	$DefinedRules = $Bigipreportconfig.Settings.iRules.iRule
+
+	$ruleObj = @()
+
+	Foreach($Rule in ( $DefinedRules | Where-Object { $_.LoadBalancer -and $Rule.iRuleName } )){
+
+		$tempRule = @{}
+
+		$tempRule.add("LoadBalancer", $Rule.LoadBalancer)
+		$tempRule.add("iRuleName", $Rule.iRuleName)
+
+		$ruleObj += $tempRule
+	}
+
+	$ruleObj | ConvertTo-Json
+}
+
+#EndRegion
+
+
 #Region Function Translate-status
 Function Translate-Status {
 
@@ -1354,7 +1378,7 @@ Function Write-TemporaryFiles {
 	
 	$StreamWriter.dispose()
 	
-	if($Global:Bigipreportconfig.Settings.iRules.ShowiRuleLinks -eq $true){
+	if($Global:Bigipreportconfig.Settings.iRules.Enabled -eq $true){
 		
 		log info "Writing temporary irules json object to $($Global:irulesjsonpath + ".tmp")"
 		
@@ -1366,13 +1390,16 @@ Function Write-TemporaryFiles {
 			$Status  = $false
 		}
 		
-		
 	} else {
 		
 		log info "iRule links disabled in config. Writing empty json object to $($Global:irulesjsonpath + ".tmp")"
 		
 		$StreamWriter = New-Object System.IO.StreamWriter($($Global:irulesjsonpath + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
-		$StreamWriter.Write($(@("") | ConvertTo-Json -Compress -Depth 5))
+		
+		#Since rules has been disabled, only write those defined
+		$ruleScope = $Global:irules | Where-Object { $_.name -in $Bigipreportconfig.Settings.iRules.iRule.iRuleName -and $_.loadbalancer -in $Bigipreportconfig.Settings.iRules.iRule.loadbalancer }
+
+		$StreamWriter.Write($($ruleScope | ConvertTo-Json -Compress -Depth 5))
 		
 		if(!$?){ 
 			log error "Failed to update the temporary irules json file"	
@@ -1450,6 +1477,9 @@ $Global:html = @'
 		<script>
 '@
 		
+		$ruleObj = Get-DefinedRules
+		$Global:html += "`nvar definedRules = " + $ruleObj + ";`n"
+
 		if($Global:Bigipreportconfig.Settings.iRules.enabled -eq $true){
 			$Global:html += "var ShowiRules = true;"
 		} else {
