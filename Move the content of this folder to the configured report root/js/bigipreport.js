@@ -142,11 +142,87 @@ $(window).load(function() {
 		
 		/*************************************************************************************************************
 		
-			This section inserts a share link and settings and displays them
+			This section inserts a share link
 		
 		**************************************************************************************************************/	
 		
 		$("#allbigips_filter").append('<a href="javascript:void(0);" onMouseClick="" onMouseOver="javascript:showShareLink()" class="sharelink">Share search<p>CTRL + C to copy<br><input id="sharelink" value=""></p></a>');
+		
+		/*************************************************************************************************************
+		
+			This section inserts the iRules button if any rules are defined
+		
+		**************************************************************************************************************/	
+		
+		if(definedRules.length > 0){
+			$("#allbigips_filter").append("<a id=\"irulesButton\" class=\"irulesButton\" href=\"javascript:void(0);\">Show defined iRules</a>")
+
+			$("#irulesButton").on("click", function(){
+
+				var ruleTable = "";
+
+				ruleTable += "<table class=\"definedRulesTable\"><thead>";
+				ruleTable += "<tr><th>Load balancer</th><th>Name</th><th>Associated Pools</th><th>&nbsp;</th>";
+				ruleTable += "</thead>";
+				ruleTable += "<tbody>";
+
+				for(i in definedRules){
+
+					var loadBalancer = definedRules[i].loadBalancer;
+					var iRuleName = definedRules[i].iRuleName;
+
+					iRule = getiRule(iRuleName, loadBalancer);
+
+					//Test for missing rule by testing for an empty object ("{}")
+					if(Object.keys(iRule).length === 0 && iRule.constructor === Object){
+						ruleTable += "<tr class=\"missingRule\"><td>" + loadBalancer + "</td><td>" + iRuleName + "</td><td>This rule was defined but not found.<br>Make sure the configuration is correct.<br>Please note that it's case sensitive.</td><td>N/A</td></tr>"
+					} else {
+
+						ruleTable += "<tr class=\"definedRuleRow\" data-rule-name=\"" + iRuleName + "\" data-rule-loadbalancer=\"" + loadBalancer + "\"><td>" + iRule.loadbalancer + "</td><td>" + iRule.name + "</td><td>"
+
+						if(iRule.pools !== null){
+							ruleTable += iRule.pools.join("<br>");
+						} else {
+							ruleTable += "N/A";
+						}
+
+						ruleTable += "</td><td><a href=\"javascript:void(0);\" class=\"definedRuleButton\" data-rule-name=\"" + iRuleName + "\" data-rule-loadbalancer=\"" + loadBalancer + "\">Show definition</a><td></tr>";
+					}
+					
+				}
+
+				ruleTable += "</tbody></table>";
+
+				//Prepare the header
+				$("#firstlayerdetailsheader").html("Pre-defined iRules")
+
+				//Set the footer
+				$('.firstlayerdetailsfooter').html("<a class=\"lightboxbutton\" href=\"javascript:void(0);\" onClick=\"javascript:$('.lightbox').fadeOut();\">Close preferences</a>");
+
+				//Inject the html
+				$("#firstlayerdetailscontentdiv").html(ruleTable);
+
+				//Attach event handlers
+				$(".definedRuleRow").on("click", function(){
+
+					var iRuleName = $(this).attr("data-rule-name");
+					var loadBalancer = $(this).attr("data-rule-loadbalancer");
+					showiRuleDetails(iRuleName, loadBalancer);
+
+				});
+
+				//Show the first light box layer
+				$("#firstlayerdiv").fadeIn();
+
+			})
+		}
+
+		/*************************************************************************************************************
+		
+			This section inserts a preferences button and attaches even handlers to it
+		
+		**************************************************************************************************************/	
+		
 		$("#allbigips_filter").append("<a id=\"preferencesButton\" class=\"preferencesButton\" href=\"javascript:void(0);\">Site preferences</a>")
 
 		$("#preferencesButton").on("click", showPreferences);
@@ -884,7 +960,6 @@ function getiRule(irule, loadbalancer){
 
 	//Find the matching irule from the JSON object
 	for(var i in irules){
-		
 		if(irules[i].name == irule && irules[i].loadbalancer == loadbalancer) {
 			matchingirule = irules[i];
 		}

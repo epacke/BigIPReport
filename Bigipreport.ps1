@@ -1522,32 +1522,12 @@ $Global:html += @'
 		<table id="allbigips" class="bigiptable">
 			<thead>
 				<tr>
-					<th><input type="text" name="loadBalancer" value="Load balancer" class="search_init" data-column-name="Load balancer" data-setting-name="showLoadBalancerColumn"/></th>
+					<th><input type="text" name="loadBalancer" value="LB" class="search_init" data-column-name="Load balancer" data-setting-name="showLoadBalancerColumn"/></th>
 					<th><input type="text" name="vipName" value="VIP Name" class="search_init" data-column-name="Virtual server" data-setting-name="showVirtualServerColumn"/></th>
 					<th><input type="text" name="ipPort" value="IP:Port" class="search_init" data-column-name="IP:Port" data-setting-name="showIPPortColumn" /></th>
-'@
-
-	
-$Global:html += @'
 					<th><input type="text" name="sslProfile" size=6 value="SSL" class="search_init" data-column-name="SSL Profile" data-setting-name="showSSLProfileColumn"/></th>
-'@
-	
-	if($Global:Bigipreportconfig.Settings.Columns.ShowCompressionProfile -eq $true){
-
-		$Global:html += @'
-
-					<th><input type="text" name="compressionProfile" size=32 value="Compr" class="search_init" data-column-name="Compression Profile" data-setting-name="showCompressionProfileColumn" /></th>
-'@
-
-	}
-
-		$Global:html += @'
-
-					<th><input type="text" name="persistence_profile" size=30 value="Persistence" class="search_init" data-column-name="Persistence Profile" data-setting-name="showPersistenceProfileColumn"/></th>
-'@
-	
-$Global:html += @'
-
+					<th><input type="text" name="compressionProfile" size=32 value="C" class="search_init" data-column-name="Compression Profile" data-setting-name="showCompressionProfileColumn" /></th>
+					<th><input type="text" name="persistence_profile" size=30 value="P" class="search_init" data-column-name="Persistence Profile" data-setting-name="showPersistenceProfileColumn"/></th>
 					<th><input type="text" name="pool_members" value="Pool/Members" class="search_init" data-column-name="Pools/Members" data-setting-name="showPoolsMembersColumn"/></th>
 				</tr>
 			</thead>
@@ -1605,14 +1585,14 @@ foreach($LoadbalancerName in $BigIPDict.values){
 		if($NATdict.Contains($vsipexrd)){
 			$Global:html += @"
 			
-						<td>
+						<td class="centeredCell">
 							$($vs.ip + ":" + $vs.port)<br>Public IP:$($NATdict[$vsipexrd])
 						</td>
 "@
 		} else {
 			$Global:html += @"
 			
-						<td>
+						<td class="centeredCell">
 							$($vs.ip + ":" + $vs.port)
 						</td>
 "@
@@ -1621,40 +1601,39 @@ foreach($LoadbalancerName in $BigIPDict.values){
 		if($vs.sslprofile -ne "None"){
 			$Global:html += @"
 				
-						<td>
-							Yes&nbsp;&nbsp;&nbsp;
+						<td class="centeredCell">
+							Yes
 						</td>
 "@
 		} else {
 			$Global:html += @"
 					
-						<td>
-							No&nbsp;&nbsp;&nbsp;&nbsp;
+						<td class="centeredCell">
+							No
 						</td>
 "@
 		}
 		
-		if($Global:Bigipreportconfig.Settings.Columns.ShowCompressionProfile -eq $true){
-			if($vs.compressionprofile -ne "None"){
-				$Global:html += @"
-				
-							<td>
-								Yes
-							</td>
+
+		if($vs.compressionprofile -ne "None"){
+			$Global:html += @"
+			
+						<td class="centeredCell">
+							Yes
+						</td>
 "@
-			} else {
-				$Global:html += @"
-							
-							<td>
-								No
-							</td>
+		} else {
+			$Global:html += @"
+						
+						<td class="centeredCell">
+							No
+						</td>
 "@
-			}	
-		}
+			}
 		
 		$Global:html += @"
 					
-					<td>
+					<td class="centeredCell">
 						$($vs.persistence)
 					</td>
 "@

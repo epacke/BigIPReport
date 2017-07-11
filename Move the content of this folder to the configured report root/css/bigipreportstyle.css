@@ -453,7 +453,7 @@ a:hover.sharepoollink p input {
 }
 
 
-a.preferencesButton {
+a.preferencesButton, a.irulesButton {
 	position: relative;
 	display: inline;
 	background: #3498db;
@@ -473,7 +473,7 @@ a.preferencesButton {
 	text-decoration: none;
 }
 
-a.preferencesButton:hover {
+a.preferencesButton:hover, a.irulesButton:hover {
 	background: #3cb0fd;
 	background-image: -webkit-linear-gradient(top, #3cb0fd, #3498db);
 	background-image: -moz-linear-gradient(top, #3cb0fd, #3498db);
@@ -716,6 +716,37 @@ table.settingsTable tbody tr:nth-child(odd) td {
 	white-space: nowrap;
 }
 
+/**********************************************************************************************************************************
+	CSS related to defined iRules
+***********************************************************************************************************************************/
+
+.definedRulesTable  {
+	border-collapse: collapse;
+	font-family: Calibri;
+	margin: 0 auto;
+	width: 100%;
+}
+
+.definedRulesTable tbody > tr > td {
+	border: 1px solid #CBCBCB;
+	border-collapse: collapse;
+	width:1px;
+	white-space: nowrap;
+	text-align: center;
+}
+
+.definedRulesTable thead > tr > th {
+	text-align: center;
+	background-color:#295B85;
+	color:white;
+	white-space: nowrap;
+}
+
+.definedRulesTable tbody > tr:nth-child(odd) > td {
+	background-color:#EEF5FB;
+	border-collapse: collapse;
+	white-space: nowrap;
+}
 
 /**********************************************************************************************************************************
 	Styles for generic objects
@@ -833,6 +864,11 @@ a:hover.tooltip p {
 	text-decoration:none;
 	text-shadow:0px 1px 0px #ffee66;
 }
+
+.centeredCell, .loadbalancerCell {
+	text-align: center;
+}
+
 .updateavailable:hover {
 	background:-webkit-gradient(linear, left top, left bottom, color-stop(0.05, #ffab23), color-stop(1, #ffec64));
 	background:-moz-linear-gradient(top, #ffab23 5%, #ffec64 100%);
