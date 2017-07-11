@@ -157,14 +157,13 @@
 	white-space:nowrap;
 }
 
-.virtualserverdetailstable tbody > tr:nth-child(odd) > td {
-	background-color:#EEF5FB;
-	border-collapse: collapse;
-	border:1px solid #CBCBCB;
-}
-/****************************************************************************************************************************
-	This section contains the style for the pool details lightbox div
-*****************************************************************************************************************************/
+.virtualserverdetailstable tbody > tr:nth-child(odd) > td {     background-
+color:#6890B2;     border-collapse: collapse;     border:1px solid #CBCBCB; }
+/*****************************************************************************
+***********************************************     This section contains the
+style for the pool details lightbox div **************************************
+******************************************************************************
+*********/
 
 /*Header with the pool name */
 
@@ -370,27 +369,26 @@ a:hover.monitortest p {
 	text-decoration: none;
 }
 
-a.sharepoollink, a.preferencesButton {
+a.sharepoollink {
 	position: relative;
 	display: inline;
 	background: #3498db;
-	background-image: -webkit-linear-gradient(top, #3498db, #2980b9);
-	background-image: -moz-linear-gradient(top, #3498db, #2980b9);
-	background-image: -ms-linear-gradient(top, #3498db, #2980b9);
-	background-image: -o-linear-gradient(top, #3498db, #2980b9);
-	background-image: linear-gradient(to bottom, #3498db, #2980b9);
+	background-image: -webkit-linear-gradient(top, #3498db, #295B85);
+	background-image: -moz-linear-gradient(top, #3498db, #295B85);
+	background-image: -ms-linear-gradient(top, #3498db, #295B85);
+	background-image: -o-linear-gradient(top, #3498db, #295B85);
+	background-image: linear-gradient(to bottom, #3498db, #295B85);
 	-webkit-border-radius: 10;
 	-moz-border-radius: 10;
 	border-radius: 10px;
 	font-family: Arial;
 	color: #ffffff;
-	font-size: 12px;
-	padding: 5px 20px 5px 20px;
+	font-size: 14px;
+	padding: 7px 20px 7px 20px;
 	margin:5px;
 	text-decoration: none;
 }
-
-a.sharepoollink:hover, a.preferencesButton:hover {
+a.sharepoollink:hover {
 	background: #3cb0fd;
 	background-image: -webkit-linear-gradient(top, #3cb0fd, #3498db);
 	background-image: -moz-linear-gradient(top, #3cb0fd, #3498db);
@@ -452,6 +450,37 @@ a:hover.sharepoollink p {
 a:hover.sharepoollink p input {
 	font-size:12px;
 	margin-left:0px;
+}
+
+
+a.preferencesButton, a.irulesButton {
+	position: relative;
+	display: inline;
+	background: #3498db;
+	background-image: -webkit-linear-gradient(top, #3498db, #2980b9);
+	background-image: -moz-linear-gradient(top, #3498db, #2980b9);
+	background-image: -ms-linear-gradient(top, #3498db, #2980b9);
+	background-image: -o-linear-gradient(top, #3498db, #2980b9);
+	background-image: linear-gradient(to bottom, #3498db, #2980b9);
+	-webkit-border-radius: 10;
+	-moz-border-radius: 10;
+	border-radius: 10px;
+	font-family: Arial;
+	color: #ffffff;
+	font-size: 12px;
+	padding: 5px 20px 5px 20px;
+	margin:5px;
+	text-decoration: none;
+}
+
+a.preferencesButton:hover, a.irulesButton:hover {
+	background: #3cb0fd;
+	background-image: -webkit-linear-gradient(top, #3cb0fd, #3498db);
+	background-image: -moz-linear-gradient(top, #3cb0fd, #3498db);
+	background-image: -ms-linear-gradient(top, #3cb0fd, #3498db);
+	background-image: -o-linear-gradient(top, #3cb0fd, #3498db);
+	background-image: linear-gradient(to bottom, #3cb0fd, #3498db);
+	text-decoration: none;
 }
 
 
@@ -666,6 +695,60 @@ a:hover.sharelink p input {
 }
 
 /**********************************************************************************************************************************
+	CSS related to settings
+***********************************************************************************************************************************/
+
+
+table.settingsTable {
+	margin: 0 auto;
+	width: 50%;
+}
+
+table.settingsTable thead tr th, tbody td {
+	border:0px;
+	font-family: "Calibri";
+}
+
+table.settingsTable tbody tr:nth-child(odd) td {
+	background-color: #EEF5FB;
+	border-collapse: collapse;
+	width:1px;
+	white-space: nowrap;
+}
+
+/**********************************************************************************************************************************
+	CSS related to defined iRules
+***********************************************************************************************************************************/
+
+.definedRulesTable  {
+	border-collapse: collapse;
+	font-family: Calibri;
+	margin: 0 auto;
+	width: 100%;
+}
+
+.definedRulesTable tbody > tr > td {
+	border: 1px solid #CBCBCB;
+	border-collapse: collapse;
+	width:1px;
+	white-space: nowrap;
+	text-align: center;
+}
+
+.definedRulesTable thead > tr > th {
+	text-align: center;
+	background-color:#295B85;
+	color:white;
+	white-space: nowrap;
+}
+
+.definedRulesTable tbody > tr:nth-child(odd) > td {
+	background-color:#EEF5FB;
+	border-collapse: collapse;
+	white-space: nowrap;
+}
+
+/**********************************************************************************************************************************
 	Styles for generic objects
 ***********************************************************************************************************************************/
 
@@ -781,6 +864,11 @@ a:hover.tooltip p {
 	text-decoration:none;
 	text-shadow:0px 1px 0px #ffee66;
 }
+
+.centeredCell, .loadbalancerCell {
+	text-align: center;
+}
+
 .updateavailable:hover {
 	background:-webkit-gradient(linear, left top, left bottom, color-stop(0.05, #ffab23), color-stop(1, #ffec64));
 	background:-moz-linear-gradient(top, #ffab23 5%, #ffec64 100%);
@@ -840,11 +928,11 @@ a:hover.tooltip p {
 
 span.adcLinkSpan a {
   background: #da212f;
-  background-image: -webkit-linear-gradient(top, #da212f, #ab252f);
-  background-image: -moz-linear-gradient(top, #da212f, #ab252f);
-  background-image: -ms-linear-gradient(top, #da212f, #ab252f);
-  background-image: -o-linear-gradient(top, #da212f, #ab252f);
-  background-image: linear-gradient(to bottom, #da212f, #ab252f);
+  background-image: -webkit-linear-gradient(top, #99173C, #B93057);
+  background-image: -moz-linear-gradient(top, #99173C, #B93057);
+  background-image: -ms-linear-gradient(top, #99173C, #B93057);
+  background-image: -o-linear-gradient(top, #99173C, #B93057);
+  background-image: linear-gradient(to bottom, #99173C, #B93057);
   -webkit-border-radius: 28;
   -moz-border-radius: 28;
   border-radius: 28px;
@@ -857,10 +945,73 @@ span.adcLinkSpan a {
 
 span.adcLinkSpan a:hover {
   background: #c92330;
-  background-image: -webkit-linear-gradient(top, #c92330, #911b25);
-  background-image: -moz-linear-gradient(top, #c92330, #911b25);
-  background-image: -ms-linear-gradient(top, #c92330, #911b25);
-  background-image: -o-linear-gradient(top, #c92330, #911b25);
-  background-image: linear-gradient(to bottom, #c92330, #911b25);
+  background-image: -webkit-linear-gradient(top, #B93057, #D05276);
+  background-image: -moz-linear-gradient(top, #B93057, #D05276);
+  background-image: -ms-linear-gradient(top, #B93057, #D05276);
+  background-image: -o-linear-gradient(top, #B93057, #D05276);
+  background-image: linear-gradient(to bottom, #B93057, #D05276);
   text-decoration: none;
+}
+
+.visibleColumnButton {
+  background: #3498db;
+  background-image: -webkit-linear-gradient(top, #347502, #347502);
+  background-image: -moz-linear-gradient(top, #347502, #347502);
+  background-image: -ms-linear-gradient(top, #347502, #347502);
+  background-image: -o-linear-gradient(top, #347502, #347502);
+  background-image: linear-gradient(to bottom, #347502, #347502);
+  /*-webkit-border-radius: 28;
+  -moz-border-radius: 28;
+  border-radius: 28px;
+  */
+  font-family: Arial;
+  color: #ffffff;
+  font-size: 12px;
+  padding: 4px 8px 4px 8px;
+  margin-left: 5px;
+  text-decoration: none;
+}
+
+.visibleColumnButton:hover {
+  background: #3cb0fd;
+  background-image: -webkit-linear-gradient(top, #4F9717, #4F9717);
+  background-image: -moz-linear-gradient(top, #4F9717, #4F9717);
+  background-image: -ms-linear-gradient(top, #4F9717, #4F9717);
+  background-image: -o-linear-gradient(top, #4F9717, #4F9717);
+  background-image: linear-gradient(to bottom, #4F9717, #4F9717);
+  text-decoration: none;
+}
+
+.hiddenColumnButton {
+  background: #f5f5f5;
+  background-image: -webkit-linear-gradient(top, #f5f5f5, #c2c2c2);
+  background-image: -moz-linear-gradient(top, #f5f5f5, #c2c2c2);
+  background-image: -ms-linear-gradient(top, #f5f5f5, #c2c2c2);
+  background-image: -o-linear-gradient(top, #f5f5f5, #c2c2c2);
+  background-image: linear-gradient(to bottom, #f5f5f5, #c2c2c2);
+  /*-webkit-border-radius: 28;
+  -moz-border-radius: 28;
+  border-radius: 28px;
+  */
+  font-family: Arial;
+  color: #383838;
+  font-size: 12px;
+  padding: 4px 8px 4px 8px;
+  margin-left: 5px;
+  text-decoration: none;
+}
+
+.hiddenColumnButton:hover {
+  background: #ebebeb;
+  background-image: -webkit-linear-gradient(top, #ebebeb, #e8e8e8);
+  background-image: -moz-linear-gradient(top, #ebebeb, #e8e8e8);
+  background-image: -ms-linear-gradient(top, #ebebeb, #e8e8e8);
+  background-image: -o-linear-gradient(top, #ebebeb, #e8e8e8);
+  background-image: linear-gradient(to bottom, #ebebeb, #e8e8e8);
+  text-decoration: none;
+}
+
+#toggleHeader {
+	font-family: Arial;
+	font-weight: bold;
 }

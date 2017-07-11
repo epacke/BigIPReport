@@ -99,7 +99,8 @@ $(window).load(function() {
 			"iDisplayLength": 15,
 			"oLanguage": {
 				"sSearch": "Search all columns:"
-			}
+			},
+			"dom": '<"top">frt<"bottom"ilp><"clear">'
 		} );
 		
 		
@@ -136,42 +137,132 @@ $(window).load(function() {
 			}
 		} );
 		
-		/*************************************************************************************************************
-		
-			This section handles the irule selection dropdown initiation and the syntax highlighting
-		
-		**************************************************************************************************************/	
-
-		$("#allbigips_filter").append($("#iRuleSelectiondiv").html());
-		$("#iRuleSelectiondiv").html("");
-		
-		//Initiate chosen (the searchable dropdown used for displaying irules
-		$(".iRuleDropdown").chosen();
-		
-		/* Handles when someone chooses an element from the dropdown dropbox */
-		//$('#iRuleDropdown').live('change', function () {
-		$('#iRuleDropdown').change(function(){
-			var irulediv = "#" + $(this).val();
-			$(irulediv).show();
-			$(irulediv).children().center();
-		});
-		
 		/* Initiate the syntax highlighting for irules*/
 		sh_highlightDocument('/js/', '.js');
 		
 		/*************************************************************************************************************
 		
-			This section inserts a share link and settings and displays them
+			This section inserts a share link
 		
 		**************************************************************************************************************/	
 		
 		$("#allbigips_filter").append('<a href="javascript:void(0);" onMouseClick="" onMouseOver="javascript:showShareLink()" class="sharelink">Share search<p>CTRL + C to copy<br><input id="sharelink" value=""></p></a>');
+		
+		/*************************************************************************************************************
+		
+			This section inserts the iRules button if any rules are defined
+		
+		**************************************************************************************************************/	
+		
+		if(definedRules.length > 0){
+			$("#allbigips_filter").append("<a id=\"irulesButton\" class=\"irulesButton\" href=\"javascript:void(0);\">Show defined iRules</a>")
+
+			$("#irulesButton").on("click", function(){
+
+				var ruleTable = "";
+
+				ruleTable += "<table class=\"definedRulesTable\"><thead>";
+				ruleTable += "<tr><th>Load balancer</th><th>Name</th><th>Associated Pools</th><th>&nbsp;</th>";
+				ruleTable += "</thead>";
+				ruleTable += "<tbody>";
+
+				for(i in definedRules){
+
+					var loadBalancer = definedRules[i].loadBalancer;
+					var iRuleName = definedRules[i].iRuleName;
+
+					iRule = getiRule(iRuleName, loadBalancer);
+
+					//Test for missing rule by testing for an empty object ("{}")
+					if(Object.keys(iRule).length === 0 && iRule.constructor === Object){
+						ruleTable += "<tr class=\"missingRule\"><td>" + loadBalancer + "</td><td>" + iRuleName + "</td><td>This rule was defined but not found.<br>Make sure the configuration is correct.<br>Please note that it's case sensitive.</td><td>N/A</td></tr>"
+					} else {
+
+						ruleTable += "<tr class=\"definedRuleRow\" data-rule-name=\"" + iRuleName + "\" data-rule-loadbalancer=\"" + loadBalancer + "\"><td>" + iRule.loadbalancer + "</td><td>" + iRule.name + "</td><td>"
+
+						if(iRule.pools !== null){
+							ruleTable += iRule.pools.join("<br>");
+						} else {
+							ruleTable += "N/A";
+						}
+
+						ruleTable += "</td><td><a href=\"javascript:void(0);\" class=\"definedRuleButton\" data-rule-name=\"" + iRuleName + "\" data-rule-loadbalancer=\"" + loadBalancer + "\">Show definition</a><td></tr>";
+					}
+					
+				}
+
+				ruleTable += "</tbody></table>";
+
+				//Prepare the header
+				$("#firstlayerdetailsheader").html("Pre-defined iRules")
+
+				//Set the footer
+				$('.firstlayerdetailsfooter').html("<a class=\"lightboxbutton\" href=\"javascript:void(0);\" onClick=\"javascript:$('.lightbox').fadeOut();\">Close preferences</a>");
+
+				//Inject the html
+				$("#firstlayerdetailscontentdiv").html(ruleTable);
+
+				//Attach event handlers
+				$(".definedRuleRow").on("click", function(){
+
+					var iRuleName = $(this).attr("data-rule-name");
+					var loadBalancer = $(this).attr("data-rule-loadbalancer");
+					showiRuleDetails(iRuleName, loadBalancer);
+
+				});
+
+				//Show the first light box layer
+				$("#firstlayerdiv").fadeIn();
+
+			})
+		}
+
+		/*************************************************************************************************************
+		
+			This section inserts a preferences button and attaches even handlers to it
+		
+		**************************************************************************************************************/	
+		
 		$("#allbigips_filter").append("<a id=\"preferencesButton\" class=\"preferencesButton\" href=\"javascript:void(0);\">Site preferences</a>")
 
 		$("#preferencesButton").on("click", showPreferences);
 
+		$("#allbigips_filter").append("<div style=\"float:right\"><span id=\"toggleHeader\">Toggle columns:<span><span id=\"columnToggleButtons\"></span></div>")
 
-		
+		$("#allbigips thead th input").each(function(){
+
+			var columnID = $(this).attr("data-setting-name");
+
+			var toggleLinkData = "";
+
+			if(localStorage.getItem(columnID) === "true"){
+				buttonClass = "visibleColumnButton";
+			} else {
+				buttonClass = "hiddenColumnButton";
+			}
+
+			toggleLinkData += "<a href=\"javascript:void(0)\" class=\"" + buttonClass + "\" id=\"" + columnID + "\">" + $(this).attr("data-column-name") + "</a>";
+
+			$("#columnToggleButtons").append(toggleLinkData);
+
+			$("#" + columnID).on("click", function(){
+
+				var preferenceName = $(this).attr("id")
+
+				if(localStorage.getItem(preferenceName) === "false"){
+					$(this).addClass("visibleColumnButton").removeClass("hiddenColumnButton");
+					localStorage.setItem(preferenceName, "true");
+				} else {
+					$(this).addClass("hiddenColumnButton").removeClass("visibleColumnButton");
+					localStorage.setItem(preferenceName, "false");		
+				}
+
+				toggleColumns();
+
+			});
+
+		});
+
 		/*************************************************************************************************************
 		
 			This section adds the update check button div and initiates the update checks
@@ -179,7 +270,7 @@ $(window).load(function() {
 		**************************************************************************************************************/	
 		
 		//Add the div containing the update available button
-		$("#allbigips_filter").after($('<div id="updateavailablediv"></div>'));
+		$("#preferencesButton").after($('<span id="updateavailablespan"></span>'));
 		
 		//Check if there's a new update every 30 minutes
 		setInterval(function(){
@@ -196,11 +287,11 @@ $(window).load(function() {
 
 					if( timesincerefresh > 240){
 						if(timesincelatestgeneration > 5){
-							$("#updateavailablediv").html('<a href="javascript:document.location.reload()" class="criticalupdateavailable">Report update available</a>');
+							$("#updateavailablespan").html('<a href="javascript:document.location.reload()" class="criticalupdateavailable">Report update available</a>');
 						}
 					} else if ( timesincerefresh != 0){
 						if(timesincelatestgeneration > 5){
-							$("#updateavailablediv").html('<a href="javascript:document.location.reload()" class="updateavailable">Report update available</a>');
+							$("#updateavailablespan").html('<a href="javascript:document.location.reload()" class="updateavailable">Report update available</a>');
 						}
 					}
 
@@ -246,6 +337,7 @@ $(window).load(function() {
 			
 			
 			hidePools();
+			toggleColumns();
 
 			if(localStorage.getItem("showAdcLinks") === "false"){
 				$(".adcLinkSpan").hide();
@@ -276,10 +368,6 @@ $(window).load(function() {
 			
 		} );
 		
-
-
-
-		
 		/*************************************************************************************************************
 		
 			If any search parameters has been sent, populate the search
@@ -289,6 +377,7 @@ $(window).load(function() {
 		//Make sure that all pools are hidden 
 		populateSearchParameters(oTable);
 		oTable.draw();
+
 	});
 });
 
@@ -393,15 +482,24 @@ function showPreferences(){
 	//Prepare the header
 	$("#firstlayerdetailsheader").html("BigIP Report Preferences")
 
-	//Prepare the content
-	var settingsContent = "<table>";
+	//Set the footer
+	$('.firstlayerdetailsfooter').html("<a class=\"lightboxbutton\" href=\"javascript:void(0);\" onClick=\"javascript:$('.lightbox').fadeOut();\">Close preferences</a>");
 
+	//Prepare the content
+	var settingsContent = "<table class=\"settingsTable\">";
+
+	settingsContent += "<thead>";
+	settingsContent += "<tr><th colspan=2>Generic settings</th>";
+	settingsContent += "</thead>";
+	
+	settingsContent += "<tbody>";
 	settingsContent += "<tr><td>Expand all pool members</td><td><input type=\"checkbox\" id=\"autoExpandPools\"></td></tr>";
 	settingsContent += "<tr><td>Direct links to Big-IP objects</td><td><input type=\"checkbox\" id=\"adcLinks\"></td></tr>";
-	
-	settingsContent += "</table>"
-	
-	settingsContent += "<br><br><br><a class=\"lightboxbutton\" href=\"javascript:void(0);\" onClick=\"javascript:$('.lightbox').fadeOut();\">Close virtual server details</a>";
+	settingsContent += "</tbody>";
+
+	settingsContent += "</table>";
+
+	settingsContent += "</div>";
 
 	//Populate the content
 	$("#firstlayerdetailscontentdiv").html(settingsContent);
@@ -412,7 +510,6 @@ function showPreferences(){
 
 	//Event handler for auto expand pools
 	$("#autoExpandPools").on("click", function(){
-			console.log("te");
 			localStorage.setItem("autoExpandPools", this.checked);
 			oTable.draw();
 	});
@@ -423,10 +520,41 @@ function showPreferences(){
 			oTable.draw();
 	});
 
+	//Make sure that the check boxes are checked according to the settings
+	$("#allbigips thead th input").each(function(){
+		var columnID = $(this).attr("data-setting-name");
+		$("#" + columnID).prop("checked", localStorage.getItem(columnID) === "true");
+	});
+
+	$(".columToggle").on("click", function(){
+		localStorage.setItem(this.getAttribute("id"), this.checked);
+		toggleColumns();
+	});
+
 	//Show the first light box layer
 	$("#firstlayerdiv").fadeIn();
 
 }
+
+function toggleColumns(){
+
+	$("#allbigips thead th input").each(function(index, tHeader){
+
+		var settingName = tHeader.getAttribute("data-setting-name");
+		index += 1
+
+		if(localStorage.getItem(settingName) === "false"){
+			$(this).parent().hide();
+			$("#allbigips tbody tr.virtualserverrow td:nth-child(" + index + "\)").hide();
+		} else {
+			$(this).parent().show();
+			$("#allbigips tbody tr.virtualserverrow td:nth-child(" + index + "\)").show();
+		}
+
+	});
+
+}
+
 
 function generateShareLink(){
 	
@@ -832,7 +960,6 @@ function getiRule(irule, loadbalancer){
 
 	//Find the matching irule from the JSON object
 	for(var i in irules){
-		
 		if(irules[i].name == irule && irules[i].loadbalancer == loadbalancer) {
 			matchingirule = irules[i];
 		}
@@ -1272,7 +1399,9 @@ function showPoolDetails(pool, loadbalancer){
 }
 
 function loadPreferences(){
+	
 	for(var k in defaultPreferences){
 		if(localStorage.getItem(k) === null){ localStorage.setItem(k, defaultPreferences[k]) }
 	}
+
 }

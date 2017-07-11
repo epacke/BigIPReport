@@ -124,13 +124,11 @@
 #		4.4.0		2017-06-21		Fixing issue with the API not returning empty irules						Patrik Jonsson
 #		4.4.1		2017-07-05		Removing ASM, adding preferences											Patrik Jonsson
 #		4.4.2		2017-07-08		Adding new logo and version number in the footer							Patrik Jonsson
+#		4.4.3		2017-07-09		Moved preferences to its own window 										Patrik Jonsson
 #
 #		To do:
 #		Add reset filters
-#		Make data gathering parallel instead of serial (if possible to do in a nice way)
-#		Add auto-expand as a choice
 #       Fix a css-only loader
-#		Fix a new logo
 #
 #		This script generates a report of the LTM configuration on F5 BigIP's.
 #		It started out as pet project to help co-workers know which traffic goes where but grew.
@@ -393,17 +391,6 @@ if($Global:Bigipreportconfig.Settings.LogSettings.Enabled -eq "true" ){
 if($Global:Bigipreportconfig.Settings.Outputlevel -eq $null -or $Global:Bigipreportconfig.Settings.Outputlevel -eq ""){
 	log error "No Outputlevel configured"
 	$SaneConfig = $false
-}
-
-if($Global:Bigipreportconfig.Settings.iRulesdropdown -ne $null -and $Global:Bigipreportconfig.Settings.iRulesdropdown.iRule -ne $null -and $Global:Bigipreportconfig.Settings.iRulesdropdown.iRule -ne ""){
-	
-	#Check if the iRules list contains rules which does not have a configured load balancer
-	[array]$InvalidIrules = ($Global:Bigipreportconfig.Settings.iRulesdropdown.iRule | ForEach-Object { $_.Split("/")[0] }) | Where-Object { $Global:Bigipreportconfig.Settings.Loadbalancers.Loadbalancer -notcontains $_  }
-	
-	if($InvalidIrules.Count -ne 0){
-		log error "iRules that does not reside in a configured load balancer has been defined in the iRules section of the config"
-		$SaneConfig = $false
-	}
 }
 
 Foreach($Share in $Global:Bigipreportconfig.Settings.Shares.Share){
@@ -1114,6 +1101,35 @@ function cacheLTMinformation {
 
 #EndRegion
 
+#Region Function Get-iRules
+	
+Function Get-DefinedRules {
+
+	$DefinedRules = $Bigipreportconfig.Settings.iRules.iRule
+
+	$ruleObj = @()
+
+	Foreach($Rule in ( $DefinedRules | Where-Object { $_.LoadBalancer -and $Rule.iRuleName } )){
+
+		$tempRule = @{}
+
+		$tempRule.add("loadBalancer", $Rule.loadBalancer)
+		$tempRule.add("iRuleName", $Rule.iRuleName)
+
+		$ruleObj += $tempRule
+	}
+
+	if($ruleObj.count -eq 0){
+		"[]"
+	} else {
+		$ruleObj | ConvertTo-Json
+	}
+
+}
+
+#EndRegion
+
+
 #Region Function Translate-status
 Function Translate-Status {
 
@@ -1142,114 +1158,6 @@ Function Translate-Status {
 	}
 }
 #Endregion
-
-#Region Function generate-irules
-function generate-iRules{
-
-	if(($Global:bigipreportconfig.Settings.iRulesdropdown.iRule | where { $_ -ne "" }).Count -gt 0){
-		
-		log info "Adding configured iRule denfinitions to the body"
-		
-		Foreach($rule in $Global:bigipreportconfig.Settings.iRulesdropdown.iRule){
-		
-				$bigipirulesarr = $rule.split("/")
-				$bigipname = $BigipDict[$bigipirulesarr[0]]
-				$bigippartition = $bigipirulesarr[1]
-				$irulename = $bigipirulesarr[2]
-				$ruleobject = $irules | Where-Object { $_.name -eq "/$bigippartition/$irulename" -and $_.loadbalancer -eq $bigipname}
-						
-				if($ruleobject.count -eq 0){
-					#No rule found, throw error to log
-					log error "iRule $irulename could not be found amongst the indexed irules."
-				} elseif($ruleobject.count -gt 1){
-					#More than one rule found (should be impossible...), throw error to log
-					log error "More than one iRule with the name $irulename was found, skipping"
-				} else {
-					log success "Adding iRule $irulename to the body"
-					$iruledefinition = $ruleobject.definition
-			
-				@"
-	<div class="lightbox" id="$((($bigipname.replace("-","")).replace(".","")) + $(($irulename.replace("-","")).replace(".","")))div">
-					
-		<div class="innerLightbox">
-			<div class="iRulesContent">
-				<div class="iRuleheader">
-					$irulename
-					</div>
-					<pre class="sh_tcl">
-						$iruledefinition
-					</pre>
-				</div>
-			</div>
-		</div>
-"@
-			}
-		}
-	} else {
-		log info "No iRule links to add to the dropdown"
-	}
-
-}
-#Endregion
-
-#Region Function Test-Version
-
-Function Test-Version {
-	Param([string]$Version)
-	
-	
-
-}
-
-#EndRegion
-
-#Region Function generate-irule-links
-function generate-irule-links(){
-
-	if(($Global:bigipreportconfig.Settings.iRulesdropdown.iRule | where { $_ -ne "" }).Count -gt 0){
-		
-		$iRuletable = @"
-		
-		<select data-placeholder="Choose an iRule" class="iRuleDropdown" id="iRuleDropdown" tabindex="2">
-		<option value=""></option>
-"@
-		
-		Foreach($rule in $Global:bigipreportconfig.Settings.iRulesdropdown.iRule){
-			
-				$bigipirulesarr = $rule.split("/")
-				$bigipname = $BigipDict[$bigipirulesarr[0]]
-				$bigippartition = $bigipirulesarr[1]
-				$irulename = $bigipirulesarr[2]
-				
-				$ruleobject = $irules | Where-Object { $_.name -eq "/$bigippartition/$irulename" -and $_.loadbalancer -eq $bigipname}
-				
-				if($ruleobject.count -eq 0){
-					#No rule found, throw error to log
-					log error "iRule $irulename could not be found amongst the indexed irules."
-				} elseif($ruleobject.count -gt 1){
-					#More than one rule found (should be impossible...), throw error to log
-					log error "More than one iRule with the name $irulename was found, skipping"
-				} else {
-					log info "Adding link to $irulename to the iRules dropdown"
-					$iRuletable += @"
-				<option value="$($bigipname.replace("-","").replace(".","") + $irulename.replace("-","").replace(".",""))div">$bigipname - $irulename</option>
-"@
-			}
-		}
-		
-		$iRuletable += @"
-
-		</select>			
-"@
-		
-		Return $iRuletable
-	} else {
-		log info "No iRule definitions to add to the body"
-	}
-
-}
-
-#endregion
 
 #Region Call Cache LTM information
 foreach($LoadbalancerIP in $Global:Bigipreportconfig.Settings.Loadbalancers.Loadbalancer) { 
@@ -1475,7 +1383,7 @@ Function Write-TemporaryFiles {
 	
 	$StreamWriter.dispose()
 	
-	if($Global:Bigipreportconfig.Settings.iRules.ShowiRuleLinks -eq $true){
+	if($Global:Bigipreportconfig.Settings.iRules.Enabled -eq $true){
 		
 		log info "Writing temporary irules json object to $($Global:irulesjsonpath + ".tmp")"
 		
@@ -1487,14 +1395,20 @@ Function Write-TemporaryFiles {
 			$Status  = $false
 		}
 		
-		
 	} else {
 		
 		log info "iRule links disabled in config. Writing empty json object to $($Global:irulesjsonpath + ".tmp")"
 		
 		$StreamWriter = New-Object System.IO.StreamWriter($($Global:irulesjsonpath + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
-		$StreamWriter.Write($(@("") | ConvertTo-Json -Compress -Depth 5))
 		
+		#Since rules has been disabled, only write those defined
+		$ruleScope = $Global:irules | Where-Object { $_.name -in $Bigipreportconfig.Settings.iRules.iRule.iRuleName -and $_.loadbalancer -in $Bigipreportconfig.Settings.iRules.iRule.loadbalancer }
+
+		if($ruleScope.count -eq 0){
+			$StreamWriter.Write("[]")
+		} else {
+			$StreamWriter.Write($($ruleScope | ConvertTo-Json -Compress -Depth 5))
+		}
 		if(!$?){ 
 			log error "Failed to update the temporary irules json file"	
 			$Status  = $false
@@ -1508,7 +1422,7 @@ Function Write-TemporaryFiles {
 		log info "Writing temporary data group list json object to $($Global:datagrouplistjsonpath + ".tmp")"
 		
 		$StreamWriter = New-Object System.IO.StreamWriter($($Global:datagrouplistjsonpath + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
-		$StreamWriter.Write($($Global:DataGroupLists | ConvertTo-Json -Compress -Depth 5))
+		$StreamWriter.Write("[]")
 		
 		if(!$?){ 
 			log error "Failed to update the temporary data group lists json file"	
@@ -1519,7 +1433,7 @@ Function Write-TemporaryFiles {
 		log info "Data group list links disabled in config. Writing empty json object to $($Global:datagrouplistjsonpath + ".tmp")"
 		
 		$StreamWriter = New-Object System.IO.StreamWriter($($Global:datagrouplistjsonpath + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
-		$StreamWriter.Write($(@("") | ConvertTo-Json -Compress -Depth 5))
+		$StreamWriter.Write("[]")
 		
 		if(!$?){ 
 			log error "Failed to update the temporary data group lists json file"	
@@ -1571,6 +1485,9 @@ $Global:html = @'
 		<script>
 '@
 		
+		$ruleObj = Get-DefinedRules
+		$Global:html += "`nvar definedRules = " + $ruleObj + ";`n"
+
 		if($Global:Bigipreportconfig.Settings.iRules.enabled -eq $true){
 			$Global:html += "var ShowiRules = true;"
 		} else {
@@ -1605,29 +1522,13 @@ $Global:html += @'
 		<table id="allbigips" class="bigiptable">
 			<thead>
 				<tr>
-					<th><input type="text" name="load_balancer" value="Load balancer" class="search_init" /></th>
-					<th><input type="text" name="vip_name" value="VIP Name" class="search_init" /></th>
-					<th><input type="text" name="ip_port" value="IP:Port" class="search_init" /></th>
-'@
-
-	
-$Global:html += @'
-					<th><input type="text" name="ssl_profile" size=6 value="SSL" class="search_init" /></th>
-'@
-	
-	if($Global:Bigipreportconfig.Settings.Columns.ShowCompressionProfile -eq $true){
-		$Global:html += @'
-					<th><input type="text" name="compression_profile" size=32 value="Compr" class="search_init" /></th>
-'@
-	}
-	if($Global:Bigipreportconfig.Settings.Columns.ShowPersistence -eq $true) { 
-		$Global:html += @'
-					<th><input type="text" name="persistence_profile" size=30 value="Persistence" class="search_init" /></th>
-'@
-	}
-	
-	$Global:html += @'
-					<th><input type="text" name="pool_members" value="Pool/Members" class="search_init" /></th>
+					<th><input type="text" name="loadBalancer" value="LB" class="search_init" data-column-name="Load balancer" data-setting-name="showLoadBalancerColumn"/></th>
+					<th><input type="text" name="vipName" value="VIP Name" class="search_init" data-column-name="Virtual server" data-setting-name="showVirtualServerColumn"/></th>
+					<th><input type="text" name="ipPort" value="IP:Port" class="search_init" data-column-name="IP:Port" data-setting-name="showIPPortColumn" /></th>
+					<th><input type="text" name="sslProfile" size=6 value="SSL" class="search_init" data-column-name="SSL Profile" data-setting-name="showSSLProfileColumn"/></th>
+					<th><input type="text" name="compressionProfile" size=32 value="C" class="search_init" data-column-name="Compression Profile" data-setting-name="showCompressionProfileColumn" /></th>
+					<th><input type="text" name="persistence_profile" size=30 value="P" class="search_init" data-column-name="Persistence Profile" data-setting-name="showPersistenceProfileColumn"/></th>
+					<th><input type="text" name="pool_members" value="Pool/Members" class="search_init" data-column-name="Pools/Members" data-setting-name="showPoolsMembersColumn"/></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -1684,14 +1585,14 @@ foreach($LoadbalancerName in $BigIPDict.values){
 		if($NATdict.Contains($vsipexrd)){
 			$Global:html += @"
 			
-						<td>
+						<td class="centeredCell">
 							$($vs.ip + ":" + $vs.port)<br>Public IP:$($NATdict[$vsipexrd])
 						</td>
 "@
 		} else {
 			$Global:html += @"
 			
-						<td>
+						<td class="centeredCell">
 							$($vs.ip + ":" + $vs.port)
 						</td>
 "@
@@ -1700,45 +1601,42 @@ foreach($LoadbalancerName in $BigIPDict.values){
 		if($vs.sslprofile -ne "None"){
 			$Global:html += @"
 				
-						<td>
-							Yes&nbsp;&nbsp;&nbsp;
+						<td class="centeredCell">
+							Yes
 						</td>
 "@
 		} else {
 			$Global:html += @"
 					
-						<td>
-							No&nbsp;&nbsp;&nbsp;&nbsp;
+						<td class="centeredCell">
+							No
 						</td>
 "@
 		}
 		
-		if($Global:Bigipreportconfig.Settings.Columns.ShowCompressionProfile -eq $true){
-			if($vs.compressionprofile -ne "None"){
-				$Global:html += @"
-				
-							<td>
-								Yes
-							</td>
+
+		if($vs.compressionprofile -ne "None"){
+			$Global:html += @"
+			
+						<td class="centeredCell">
+							Yes
+						</td>
 "@
-			} else {
-				$Global:html += @"
-							
-							<td>
-								No
-							</td>
-"@
-			}	
-		}
-		
-		if($Global:Bigipreportconfig.Settings.Columns.ShowPersistence -eq $true){
+		} else {
 			$Global:html += @"
 						
-						<td>
-							$($vs.persistence)
+						<td class="centeredCell">
+							No
 						</td>
 "@
-		}
+			}
+		
+		$Global:html += @"
+					
+					<td class="centeredCell">
+						$($vs.persistence)
+					</td>
+"@
 
 		if(!($vs.pools | ?{ !($Global:Bigipreportconfig.Settings.PoolExceptions.PoolException -contains $_) })){
 			$Global:html += @"
@@ -1885,12 +1783,9 @@ $Global:html += @"
 		</div>
 "@
 
-#Generate the divs containing the iRule definitions
-$Global:html += generate-iRules
 
 $Global:html += @"
-	<div id=iRuleSelectiondiv style="display:none;float:left">$(generate-irule-links)</div>
-	
+
 	<div class="lightbox" id="firstlayerdiv">
 		<div id="firstlayerdetailsheader" class="firstlayerdetailsheader"></div>
 		<div class="innerLightbox">

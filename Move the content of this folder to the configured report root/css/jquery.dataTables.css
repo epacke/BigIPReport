@@ -280,11 +280,15 @@ table.dataTable td {
 }
 .dataTables_wrapper .dataTables_length {
   float: left;
+  margin-left:20px;
 }
+
 .dataTables_wrapper .dataTables_filter {
   margin-left:15px;
   float: left;
+  width: calc(100% - 35px);
   text-align: left;
+  font-family: Arial;
 }
 .dataTables_wrapper .dataTables_filter input {
   margin-left: 0.5em;
@@ -404,6 +408,8 @@ table.dataTable td {
 .dataTables_wrapper .dataTables_processing,
 .dataTables_wrapper .dataTables_paginate {
   color: #333;
+  font-family: Arial;
+  padding-top: 0.755em;
 }
 .dataTables_wrapper .dataTables_scroll {
   clear: both;

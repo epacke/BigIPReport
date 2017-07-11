@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 	<!--Leave the version information intact-->
-	<Settings version="4.4.1">
+	<Settings version="4.3.3">
 	
 		<!-- 
 		***************************************************************************
@@ -63,7 +63,6 @@
 		-->
 		
 		<ReportRoot></ReportRoot>
-		
 		
 		<!--
 		**************************************************************************************************************************************
@@ -150,30 +149,6 @@
 		
 		
 		<!--
-		**************************************************************************************************************************************
-		*
-		*	This variable defines individual iRules you want to display together with the report, for instance to show pool selections.
-		*	
-		*	Note:
-		*	The load balancer hosting the defined irules must be indexed (configured in the <Loadbalancers> section above)
-		*
-		*	Format:
-		*	"IP/partition/irulename"
-		*
-		*	Example:
-		*	<iRulesdropdown>
-		*		<iRule>10.10.10.1/Common/anIrulename</iRule>
-		*		<iRule>192.168.1.1/Finance/dividebyzero_irule</iRule>
-		*		<iRule>192.168.1.1/Finance/redirectstuff_irule</iRule>
-		*	</iRulesdropdown>
-		*
-		**************************************************************************************************************************************
-		-->
-		
-		<iRulesdropdown>
-		</iRulesdropdown>
-		
-		<!--
 			**************************************************************************************************************************************
 			*
 			*	Pool exceptions contains pools you don't want shown in the report, for instance any syslog pools.
@@ -236,25 +211,6 @@
 		<!--
 			**************************************************************************************************************************************
 			*
-			*	In this section you can choose which columns to show. To show, set to true. To hide, set to false.
-			*
-			*	Example:
-			*	<Columns>
-			*		<ShowPersistence>false</ShowPersistence>
-			*		<ShowCompressionProfile>true</ShowCompressionProfile>
-			*	<Columns>
-			*
-			**************************************************************************************************************************************
-		-->
-		
-		<Columns>
-			<ShowPersistence>true</ShowPersistence>
-			<ShowCompressionProfile>true</ShowCompressionProfile>
-		</Columns>		
-				
-		<!--
-			**************************************************************************************************************************************
-			*
 			*	In this section you can choose to hide partition information to save space in the report.
 			*	To show, set to true. To hide, set to false.
 			*
@@ -272,7 +228,28 @@
 			<ShowPoolMemberPartition>false</ShowPoolMemberPartition>
 		</PartitionInformation>
 		
-						
+		<!--
+		
+		Here you can configure individual iRule you want to expose to the clients.
+		These will be available in the iRules section even if iRules are disabled below.
+
+		Example:
+		<iRules>
+			<iRule>
+				<Loadbalancer>f501.j.local</Loadbalancer>
+				<iRuleName>/Common/miscvip.j.local-pool_selection</iRuleName>
+			</iRule>
+			<iRule>
+				<Loadbalancer>f502.j.local</Loadbalancer>
+				<iRuleName>/Common/generate_ga_code</iRuleName>
+			</iRule>
+		</iRules>
+
+		-->
+			
+		<iRules>
+		</iRules>
+		
 		<!--
 			**************************************************************************************************************************************
 			*
@@ -390,7 +367,7 @@
 		-->
 		
 			<iRules>
-				<Enabled>true</Enabled>
+				<Enabled>false</Enabled>
 				<ShowiRuleLinks>true</ShowiRuleLinks>
 				<ShowDataGroupListsLinks>true</ShowDataGroupListsLinks>
 			</iRules>
