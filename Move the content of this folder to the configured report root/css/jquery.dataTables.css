@@ -286,7 +286,7 @@ table.dataTable td {
 .dataTables_wrapper .dataTables_filter {
   margin-left:15px;
   float: left;
-  width: calc(100% - 35px);
+  width: calc(100% - 50px);
   text-align: left;
   font-family: Arial;
 }

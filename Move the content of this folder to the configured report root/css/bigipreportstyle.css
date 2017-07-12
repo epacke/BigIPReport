@@ -50,14 +50,12 @@
 .bigiptable tbody > tr > td {
 	border: 1px solid #CBCBCB;
 	border-collapse: collapse;
-	width:1px;
 	white-space: nowrap;
 }
 
 .bigiptable thead > tr > th {
 	text-align: center;
 	background-color:#295B85;
-	width:70px;
 	color:white;
 	white-space: nowrap;
 }
@@ -65,7 +63,6 @@
 .bigiptable tbody > tr:nth-child(odd) > td {
 	background-color:#EEF5FB;
 	border-collapse: collapse;
-	width:1px;
 	white-space: nowrap;
 }
 
@@ -453,7 +450,7 @@ a:hover.sharepoollink p input {
 }
 
 
-a.preferencesButton, a.irulesButton {
+a.preferencesButton, a.irulesButton, a.definedRuleButton {
 	position: relative;
 	display: inline;
 	background: #3498db;
@@ -473,7 +470,7 @@ a.preferencesButton, a.irulesButton {
 	text-decoration: none;
 }
 
-a.preferencesButton:hover, a.irulesButton:hover {
+a.preferencesButton:hover, a.irulesButton:hover, a.definedRuleButton:hover {
 	background: #3cb0fd;
 	background-image: -webkit-linear-gradient(top, #3cb0fd, #3498db);
 	background-image: -moz-linear-gradient(top, #3cb0fd, #3498db);
@@ -587,7 +584,6 @@ a.preferencesButton:hover, a.irulesButton:hover {
 .datagrouplisttable tbody > tr > td {
 	border: 1px solid #CBCBCB;
 	border-collapse: collapse;
-	width:1px;
 	white-space: nowrap;
 }
 
@@ -628,7 +624,8 @@ a.sharelink {
 	font-size: 12px;
 	padding: 5px 20px 5px 20px;
 	text-decoration: none;
-	margin-left:5px;
+	margin-left:10px;
+	margin-right:5px;
 }
 a.sharelink:hover {
 	background: #3cb0fd;
@@ -712,7 +709,6 @@ table.settingsTable thead tr th, tbody td {
 table.settingsTable tbody tr:nth-child(odd) td {
 	background-color: #EEF5FB;
 	border-collapse: collapse;
-	width:1px;
 	white-space: nowrap;
 }
 
@@ -730,9 +726,9 @@ table.settingsTable tbody tr:nth-child(odd) td {
 .definedRulesTable tbody > tr > td {
 	border: 1px solid #CBCBCB;
 	border-collapse: collapse;
-	width:1px;
 	white-space: nowrap;
 	text-align: center;
+	padding: 10px;
 }
 
 .definedRulesTable thead > tr > th {
@@ -740,6 +736,7 @@ table.settingsTable tbody tr:nth-child(odd) td {
 	background-color:#295B85;
 	color:white;
 	white-space: nowrap;
+	padding: 10px;
 }
 
 .definedRulesTable tbody > tr:nth-child(odd) > td {
@@ -775,6 +772,7 @@ a.tooltip p {
   visibility: hidden;
   border-radius: 6px;
 }
+
 a.tooltip p:before {
   content: '';
   position: absolute;
@@ -867,6 +865,7 @@ a:hover.tooltip p {
 
 .centeredCell, .loadbalancerCell {
 	text-align: center;
+	width:1px;
 }
 
 .updateavailable:hover {

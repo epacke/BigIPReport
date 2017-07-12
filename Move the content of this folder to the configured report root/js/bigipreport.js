@@ -181,12 +181,20 @@ $(window).load(function() {
 						ruleTable += "<tr class=\"definedRuleRow\" data-rule-name=\"" + iRuleName + "\" data-rule-loadbalancer=\"" + loadBalancer + "\"><td>" + iRule.loadbalancer + "</td><td>" + iRule.name + "</td><td>"
 
 						if(iRule.pools !== null){
-							ruleTable += iRule.pools.join("<br>");
+							
+							for(x in iRule.pools){
+								
+								if(x !== 0){
+									ruleTable += "<br>"
+								}
+
+								ruleTable += "<a href=\"javascript:showPoolDetails('" + iRule.pools[x] + "', '" + loadBalancer + "', 'second')\">" + iRule.pools[x] + "</a>"							}
+
 						} else {
 							ruleTable += "N/A";
 						}
 
-						ruleTable += "</td><td><a href=\"javascript:void(0);\" class=\"definedRuleButton\" data-rule-name=\"" + iRuleName + "\" data-rule-loadbalancer=\"" + loadBalancer + "\">Show definition</a><td></tr>";
+						ruleTable += "</td><td><a href=\"javascript:void(0);\" class=\"definedRuleButton\" data-rule-name=\"" + iRuleName + "\" data-rule-loadbalancer=\"" + loadBalancer + "\">Show definition</a></td></tr>";
 					}
 					
 				}
@@ -203,7 +211,7 @@ $(window).load(function() {
 				$("#firstlayerdetailscontentdiv").html(ruleTable);
 
 				//Attach event handlers
-				$(".definedRuleRow").on("click", function(){
+				$(".definedRuleButton").on("click", function(){
 
 					var iRuleName = $(this).attr("data-rule-name");
 					var loadBalancer = $(this).attr("data-rule-loadbalancer");
@@ -685,8 +693,6 @@ function setPoolTableCellWidth(){
 		}
 	});
 
-	console.log("Pool name Max-width:" + maxwidth)
-
 	$('.poolname').each(function(i, obj) {
 		if(obj.offsetWidth < maxwidth){
 			obj.style.width = maxwidth
@@ -1019,13 +1025,13 @@ function showiRuleDetails(irule, loadbalancer){
 	}
 	
 	//Add the close button to the footer
-	$('.secondlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'#secondlayerdetailsdiv\').fadeOut()">Close irule details</a>');
+	$('.secondlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'#secondlayerdiv\').fadeOut()">Close irule details</a>');
 	//Add the div content to the page
 	$("#secondlayerdetailscontentdiv").html(divcontent);
 	//Add syntax highlighting
 	sh_highlightDocument('/js/', '.js');
 	//Show the div
-	$("#secondlayerdetailsdiv").fadeIn();
+	$("#secondlayerdiv").fadeIn();
 
 }
 
@@ -1241,9 +1247,9 @@ function showDataGroupListDetails(datagrouplist, loadbalancer){
 
 	}
 	
-	$('#secondlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'#secondlayerdetailsdiv\').fadeOut()">Close data group list details</a>');
+	$('#secondlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'#secondlayerdiv\').fadeOut()">Close data group list details</a>');
 	$("#secondlayerdetailscontentdiv").html(divcontent);
-	$("#secondlayerdetailsdiv").fadeIn();
+	$("#secondlayerdiv").fadeIn();
 
 }
 
@@ -1252,7 +1258,7 @@ function showDataGroupListDetails(datagrouplist, loadbalancer){
 	Shows the pool details light box
 **********************************************************************************************************************/
 
-function showPoolDetails(pool, loadbalancer){
+function showPoolDetails(pool, loadbalancer, layer = "first"){
 
 	var matchingpool = "";
 	
@@ -1267,7 +1273,7 @@ function showPoolDetails(pool, loadbalancer){
 	if(matchingpool != ""){
 		
 		//Build the table and headers
-		$(".firstlayerdetailsheader").html(matchingpool.name);
+		$("." + layer + "layerdetailsheader").html(matchingpool.name);
 		
 		table = '<table class="pooldetailstable">';
 		table += '	<thead><tr><th>Member name</th><th>Member IP</th><th>Port</th><th>Priority group</td><th>Member availability</th><th>Enabled</th><th>Member Status description</th></tr></thead><tbody>';
@@ -1389,12 +1395,12 @@ function showPoolDetails(pool, loadbalancer){
 		}
 		
 		
-		$('#firstlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'.lightbox\').fadeOut()">Close pool details</a><a href="javascript:void(0);" onMouseClick="" onMouseOver="javascript:showPoolShareLink(\'' + pool +'@' + loadbalancer + '\')" class="sharepoollink">Share pool details<p>CTRL + C to copy<br><input id="sharepoollink" value=""></p></a>');
+		$("#" + layer + "layerdetailsfooter").html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'.lightbox\').fadeOut()">Close pool details</a><a href="javascript:void(0);" onMouseClick="" onMouseOver="javascript:showPoolShareLink(\'' + pool +'@' + loadbalancer + '\')" class="sharepoollink">Share pool details<p>CTRL + C to copy<br><input id="sharepoollink" value=""></p></a>');
 
 	}
 
-	$("#firstlayerdetailscontentdiv").html(table);
-	$("#firstlayerdiv").fadeIn();
+	$("#" + layer + "layerdetailscontentdiv").html(table);
+	$("#" + layer + "layerdiv").fadeIn();
 
 }
 
