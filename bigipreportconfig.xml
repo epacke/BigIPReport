@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 	<!--Leave the version information intact-->
-	<Settings version="4.3.3">
+	<Settings version="4.5.0">
 	
 		<!-- 
 		***************************************************************************
@@ -371,4 +371,5 @@
 				<ShowiRuleLinks>true</ShowiRuleLinks>
 				<ShowDataGroupListsLinks>true</ShowDataGroupListsLinks>
 			</iRules>
+			
 	</Settings>
