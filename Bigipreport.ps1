@@ -1422,7 +1422,7 @@ Function Write-TemporaryFiles {
 		log info "Writing temporary data group list json object to $($Global:datagrouplistjsonpath + ".tmp")"
 		
 		$StreamWriter = New-Object System.IO.StreamWriter($($Global:datagrouplistjsonpath + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
-		$StreamWriter.Write("[]")
+		$StreamWriter.Write($($Global:DataGroupLists | ConvertTo-Json -Compress -Depth 5))
 		
 		if(!$?){ 
 			log error "Failed to update the temporary data group lists json file"	

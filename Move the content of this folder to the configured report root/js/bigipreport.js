@@ -553,10 +553,10 @@ function toggleColumns(){
 
 		if(localStorage.getItem(settingName) === "false"){
 			$(this).parent().hide();
-			$("#allbigips tbody tr.virtualserverrow td:nth-child(" + index + "\)").hide();
+			$("#allbigips > tbody > tr.virtualserverrow > td:nth-child(" + index + "\)").hide();
 		} else {
 			$(this).parent().show();
-			$("#allbigips tbody tr.virtualserverrow td:nth-child(" + index + "\)").show();
+			$("#allbigips > tbody > tr.virtualserverrow > td:nth-child(" + index + "\)").show();
 		}
 
 	});
@@ -910,7 +910,7 @@ function showVirtualServerDetails(virtualserver, loadbalancer){
 					if(ShowiRuleLinks){
 						
 						var iruleobj = getiRule(matchingvirtualserver.irules[i], loadbalancer);
-                        
+
                         if(Object.keys(iruleobj).length === 0) {                            
                             table += '	<tr><td>' + matchingvirtualserver.irules[i] + '</td><td>N/A (empty rule)</td></tr>';
                         } else {
@@ -1066,10 +1066,12 @@ function ParseDataGroupLists(irule){
 			//A bracket has been found and since the bracket counter is larger than 0 this is a nested command.
 			bracketcounter +=1;
 		} else if(irule.definition[i] == "#"){
+			
 			//Comment detected. Increase i until a new line has been detected or the end of the definition has been reached
 			while(irule.definition[i] != "\n" && i != irule.definition.length){
 				i++;
 			}
+
 			bracketcounter = 0;
 			startindex = 0;
 			tempstring = "";
@@ -1136,7 +1138,6 @@ function ParseDataGroupLists(irule){
 								break;
 						}
 						
-						
 						if(dg != ""){
 							
 							if(ShowDataGroupListsLinks == false){
@@ -1144,9 +1145,10 @@ function ParseDataGroupLists(irule){
 								matchingdatagrouplist["name"] = dg;
 							} else if(dg.indexOf("/") >= 0){  
 							//Check if a full path to a data group list has been specified and if it's legit
-							
+								
 								//Possible match of a data group list with full pathname
 								matchingdatagrouplist = getDataGroupList(dg, loadbalancer);
+
 								if(matchingdatagrouplist == ""){
 									//This did not match an existing data group list
 									continue			
@@ -1161,7 +1163,7 @@ function ParseDataGroupLists(irule){
 								//No data group list was matched
 								continue
 							}
-							
+
 							//Check if the data group list has been detected before
 							//If it hasn't, add it to the array of detected data group lists
 							if(detecteddict[dg] >= 0){
