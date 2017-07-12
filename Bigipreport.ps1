@@ -1523,9 +1523,9 @@ $Global:html += @'
 					<th><input type="text" name="loadBalancer" value="Load Balancer" class="search_init" data-column-name="Load balancer" data-setting-name="showLoadBalancerColumn"/></th>
 					<th><input type="text" name="vipName" value="VIP Name" class="search_init" data-column-name="Virtual server" data-setting-name="showVirtualServerColumn"/></th>
 					<th><input type="text" name="ipPort" value="IP:Port" class="search_init" data-column-name="IP:Port" data-setting-name="showIPPortColumn" /></th>
-					<th><input type="text" name="sslProfile" size=6 value="SSL" class="search_init" data-column-name="SSL Profile" data-setting-name="showSSLProfileColumn"/></th>
-					<th><input type="text" name="compressionProfile" size=6 value="Compression" class="search_init" data-column-name="Compression Profile" data-setting-name="showCompressionProfileColumn" /></th>
-					<th><input type="text" name="persistenceProfile" size=6 value="Persistence" class="search_init" data-column-name="Persistence Profile" data-setting-name="showPersistenceProfileColumn"/></th>
+					<th class="sslProfileProfileHeaderCell"><input type="text" name="sslProfile" size=6 value="SSL" class="search_init" data-column-name="SSL Profile" data-setting-name="showSSLProfileColumn"/></th>
+					<th class="compressionProfileHeaderCell"><input type="text" name="compressionProfile" size=6 value="Compression" class="search_init" data-column-name="Compression Profile" data-setting-name="showCompressionProfileColumn" /></th>
+					<th class="persistenceProfileHeaderCell"><input type="text" name="persistenceProfile" size=6 value="Persistence" class="search_init" data-column-name="Persistence Profile" data-setting-name="showPersistenceProfileColumn"/></th>
 					<th><input type="text" name="pool_members" value="Pool/Members" class="search_init" data-column-name="Pools/Members" data-setting-name="showPoolsMembersColumn"/></th>
 				</tr>
 			</thead>
@@ -1632,7 +1632,13 @@ foreach($LoadbalancerName in $BigIPDict.values){
 		$Global:html += @"
 					
 					<td class="centeredCell">
-						$($vs.persistence)
+						$(
+							if($vs.persistence -eq "None" ){
+								"No"
+							} else {
+								"Yes"
+							}
+						)
 					</td>
 "@
 

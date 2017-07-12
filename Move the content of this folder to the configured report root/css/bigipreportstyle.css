@@ -51,6 +51,7 @@
 	border: 1px solid #CBCBCB;
 	border-collapse: collapse;
 	white-space: nowrap;
+	min-width: 45px;
 }
 
 .bigiptable thead > tr > th {
@@ -64,6 +65,18 @@
 	background-color:#EEF5FB;
 	border-collapse: collapse;
 	white-space: nowrap;
+}
+
+.persistenceProfileHeaderCell {
+	min-width: 80px;
+}
+
+.sslProfileHeaderCell {
+	min-width: 20px;
+}
+
+.compressionProfileHeaderCell {
+	min-width: 90px;
 }
 
 /******************************************************************************************

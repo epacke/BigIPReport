@@ -1,11 +1,11 @@
 {
-	"autoExpandPools" : true,
+	"autoExpandPools" : false,
 	"showAdcLinks" : false,
 	"showLoadBalancerColumn" : true,
 	"showVirtualServerColumn" : true,
 	"showIPPortColumn" : true,
 	"showSSLProfileColumn" : true,
 	"showCompressionProfileColumn" : true,
-	"showPersistenceProfileColumn" : false,
+	"showPersistenceProfileColumn" : true,
 	"showPoolsMembersColumn" : true
 }
