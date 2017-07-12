@@ -125,6 +125,8 @@
 #		4.4.1		2017-07-05		Removing ASM, adding preferences											Patrik Jonsson
 #		4.4.2		2017-07-08		Adding new logo and version number in the footer							Patrik Jonsson
 #		4.4.3		2017-07-09		Moved preferences to its own window 										Patrik Jonsson
+#		4.5.0		2017-07-12		Adding column toggle. Moving iRule selector to its own window.				Patrik Jonsson
+#									Optimizing css
 #
 #		To do:
 #		Add reset filters
@@ -141,7 +143,7 @@
 Set-StrictMode -Version 1.0
 
 #Script version
-$Global:ScriptVersion = "4.4.2"
+$Global:ScriptVersion = "4.5.0"
 
 #Variable for storing handled errors
 $Global:LoggedErrors = @()
