@@ -1109,7 +1109,7 @@ Function Get-DefinedRules {
 
 	$ruleObj = @()
 
-	Foreach($Rule in ( $DefinedRules | Where-Object { $_.LoadBalancer -and $Rule.iRuleName } )){
+	Foreach($Rule in ( $DefinedRules | Where-Object { $_.LoadBalancer -and $_.iRuleName } )){
 
 		$tempRule = @{}
 
@@ -1422,7 +1422,7 @@ Function Write-TemporaryFiles {
 		log info "Writing temporary data group list json object to $($Global:datagrouplistjsonpath + ".tmp")"
 		
 		$StreamWriter = New-Object System.IO.StreamWriter($($Global:datagrouplistjsonpath + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
-		$StreamWriter.Write("[]")
+		$StreamWriter.Write($($Global:DataGroupLists | ConvertTo-Json -Compress -Depth 5))
 		
 		if(!$?){ 
 			log error "Failed to update the temporary data group lists json file"	
@@ -1473,14 +1473,12 @@ $Global:html = @'
 		<LINK href="./css/jquery.dataTables.css" rel="stylesheet" type="text/css">
 		<LINK href="./css/bigipreportstyle.css" rel="stylesheet" type="text/css">
 		<LINK href="./css/sh_style.css" rel="stylesheet" type="text/css">
-		<LINK href="./css/chosen.css" rel="stylesheet" type="text/css">
 		
 		<!-- This one comes from http://smallenvelop.com/display-loading-icon-page-loads-completely/ -->
 		<script type="text/javascript" language="javascript" src="./js/modernizr.js"></script>
 		<script type="text/javascript" language="javascript" src="./js/jquery.highlight.js"></script>
 		<script type="text/javascript" language="javascript" src="./js/bigipreport.js"></script>
 		<script type="text/javascript" language="javascript" src="./js/sh_main.js"></script>
-		<script type="text/javascript" language="javascript" src="./js/chosen.jquery.js"></script>
 		
 		<script>
 '@
@@ -1522,12 +1520,12 @@ $Global:html += @'
 		<table id="allbigips" class="bigiptable">
 			<thead>
 				<tr>
-					<th><input type="text" name="loadBalancer" value="LB" class="search_init" data-column-name="Load balancer" data-setting-name="showLoadBalancerColumn"/></th>
+					<th><input type="text" name="loadBalancer" value="Load Balancer" class="search_init" data-column-name="Load balancer" data-setting-name="showLoadBalancerColumn"/></th>
 					<th><input type="text" name="vipName" value="VIP Name" class="search_init" data-column-name="Virtual server" data-setting-name="showVirtualServerColumn"/></th>
 					<th><input type="text" name="ipPort" value="IP:Port" class="search_init" data-column-name="IP:Port" data-setting-name="showIPPortColumn" /></th>
-					<th><input type="text" name="sslProfile" size=6 value="SSL" class="search_init" data-column-name="SSL Profile" data-setting-name="showSSLProfileColumn"/></th>
-					<th><input type="text" name="compressionProfile" size=32 value="C" class="search_init" data-column-name="Compression Profile" data-setting-name="showCompressionProfileColumn" /></th>
-					<th><input type="text" name="persistence_profile" size=30 value="P" class="search_init" data-column-name="Persistence Profile" data-setting-name="showPersistenceProfileColumn"/></th>
+					<th class="sslProfileProfileHeaderCell"><input type="text" name="sslProfile" size=6 value="SSL" class="search_init" data-column-name="SSL Profile" data-setting-name="showSSLProfileColumn"/></th>
+					<th class="compressionProfileHeaderCell"><input type="text" name="compressionProfile" size=6 value="Compression" class="search_init" data-column-name="Compression Profile" data-setting-name="showCompressionProfileColumn" /></th>
+					<th class="persistenceProfileHeaderCell"><input type="text" name="persistenceProfile" size=6 value="Persistence" class="search_init" data-column-name="Persistence Profile" data-setting-name="showPersistenceProfileColumn"/></th>
 					<th><input type="text" name="pool_members" value="Pool/Members" class="search_init" data-column-name="Pools/Members" data-setting-name="showPoolsMembersColumn"/></th>
 				</tr>
 			</thead>
@@ -1634,7 +1632,13 @@ foreach($LoadbalancerName in $BigIPDict.values){
 		$Global:html += @"
 					
 					<td class="centeredCell">
-						$($vs.persistence)
+						$(
+							if($vs.persistence -eq "None" ){
+								"No"
+							} else {
+								"Yes"
+							}
+						)
 					</td>
 "@
 
@@ -1796,7 +1800,7 @@ $Global:html += @"
 		<div id="firstlayerdetailsfooter" class="firstlayerdetailsfooter"></div>
 	</div>
 	
-	<div class="lightbox" id="secondlayerdetailsdiv">
+	<div class="lightbox" id="secondlayerdiv">
 		<div class="secondlayerdetailsheader"></div>
 		<div class="innerLightbox">
 			<div class="secondlayerdetailscontent" id="secondlayerdetailscontentdiv">

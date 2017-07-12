@@ -181,12 +181,20 @@ $(window).load(function() {
 						ruleTable += "<tr class=\"definedRuleRow\" data-rule-name=\"" + iRuleName + "\" data-rule-loadbalancer=\"" + loadBalancer + "\"><td>" + iRule.loadbalancer + "</td><td>" + iRule.name + "</td><td>"
 
 						if(iRule.pools !== null){
-							ruleTable += iRule.pools.join("<br>");
+							
+							for(x in iRule.pools){
+								
+								if(x !== 0){
+									ruleTable += "<br>"
+								}
+
+								ruleTable += "<a href=\"javascript:showPoolDetails('" + iRule.pools[x] + "', '" + loadBalancer + "', 'second')\">" + iRule.pools[x] + "</a>"							}
+
 						} else {
 							ruleTable += "N/A";
 						}
 
-						ruleTable += "</td><td><a href=\"javascript:void(0);\" class=\"definedRuleButton\" data-rule-name=\"" + iRuleName + "\" data-rule-loadbalancer=\"" + loadBalancer + "\">Show definition</a><td></tr>";
+						ruleTable += "</td><td><a href=\"javascript:void(0);\" class=\"definedRuleButton\" data-rule-name=\"" + iRuleName + "\" data-rule-loadbalancer=\"" + loadBalancer + "\">Show definition</a></td></tr>";
 					}
 					
 				}
@@ -203,7 +211,7 @@ $(window).load(function() {
 				$("#firstlayerdetailscontentdiv").html(ruleTable);
 
 				//Attach event handlers
-				$(".definedRuleRow").on("click", function(){
+				$(".definedRuleButton").on("click", function(){
 
 					var iRuleName = $(this).attr("data-rule-name");
 					var loadBalancer = $(this).attr("data-rule-loadbalancer");
@@ -545,10 +553,10 @@ function toggleColumns(){
 
 		if(localStorage.getItem(settingName) === "false"){
 			$(this).parent().hide();
-			$("#allbigips tbody tr.virtualserverrow td:nth-child(" + index + "\)").hide();
+			$("#allbigips > tbody > tr.virtualserverrow > td:nth-child(" + index + "\)").hide();
 		} else {
 			$(this).parent().show();
-			$("#allbigips tbody tr.virtualserverrow td:nth-child(" + index + "\)").show();
+			$("#allbigips > tbody > tr.virtualserverrow > td:nth-child(" + index + "\)").show();
 		}
 
 	});
@@ -684,8 +692,6 @@ function setPoolTableCellWidth(){
 			maxwidth = obj.offsetWidth
 		}
 	});
-
-	console.log("Pool name Max-width:" + maxwidth)
 
 	$('.poolname').each(function(i, obj) {
 		if(obj.offsetWidth < maxwidth){
@@ -904,7 +910,7 @@ function showVirtualServerDetails(virtualserver, loadbalancer){
 					if(ShowiRuleLinks){
 						
 						var iruleobj = getiRule(matchingvirtualserver.irules[i], loadbalancer);
-                        
+
                         if(Object.keys(iruleobj).length === 0) {                            
                             table += '	<tr><td>' + matchingvirtualserver.irules[i] + '</td><td>N/A (empty rule)</td></tr>';
                         } else {
@@ -1019,13 +1025,13 @@ function showiRuleDetails(irule, loadbalancer){
 	}
 	
 	//Add the close button to the footer
-	$('.secondlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'#secondlayerdetailsdiv\').fadeOut()">Close irule details</a>');
+	$('.secondlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'#secondlayerdiv\').fadeOut()">Close irule details</a>');
 	//Add the div content to the page
 	$("#secondlayerdetailscontentdiv").html(divcontent);
 	//Add syntax highlighting
 	sh_highlightDocument('/js/', '.js');
 	//Show the div
-	$("#secondlayerdetailsdiv").fadeIn();
+	$("#secondlayerdiv").fadeIn();
 
 }
 
@@ -1060,10 +1066,12 @@ function ParseDataGroupLists(irule){
 			//A bracket has been found and since the bracket counter is larger than 0 this is a nested command.
 			bracketcounter +=1;
 		} else if(irule.definition[i] == "#"){
+			
 			//Comment detected. Increase i until a new line has been detected or the end of the definition has been reached
 			while(irule.definition[i] != "\n" && i != irule.definition.length){
 				i++;
 			}
+
 			bracketcounter = 0;
 			startindex = 0;
 			tempstring = "";
@@ -1130,7 +1138,6 @@ function ParseDataGroupLists(irule){
 								break;
 						}
 						
-						
 						if(dg != ""){
 							
 							if(ShowDataGroupListsLinks == false){
@@ -1138,9 +1145,10 @@ function ParseDataGroupLists(irule){
 								matchingdatagrouplist["name"] = dg;
 							} else if(dg.indexOf("/") >= 0){  
 							//Check if a full path to a data group list has been specified and if it's legit
-							
+								
 								//Possible match of a data group list with full pathname
 								matchingdatagrouplist = getDataGroupList(dg, loadbalancer);
+
 								if(matchingdatagrouplist == ""){
 									//This did not match an existing data group list
 									continue			
@@ -1155,7 +1163,7 @@ function ParseDataGroupLists(irule){
 								//No data group list was matched
 								continue
 							}
-							
+
 							//Check if the data group list has been detected before
 							//If it hasn't, add it to the array of detected data group lists
 							if(detecteddict[dg] >= 0){
@@ -1241,9 +1249,9 @@ function showDataGroupListDetails(datagrouplist, loadbalancer){
 
 	}
 	
-	$('#secondlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'#secondlayerdetailsdiv\').fadeOut()">Close data group list details</a>');
+	$('#secondlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'#secondlayerdiv\').fadeOut()">Close data group list details</a>');
 	$("#secondlayerdetailscontentdiv").html(divcontent);
-	$("#secondlayerdetailsdiv").fadeIn();
+	$("#secondlayerdiv").fadeIn();
 
 }
 
@@ -1252,7 +1260,7 @@ function showDataGroupListDetails(datagrouplist, loadbalancer){
 	Shows the pool details light box
 **********************************************************************************************************************/
 
-function showPoolDetails(pool, loadbalancer){
+function showPoolDetails(pool, loadbalancer, layer = "first"){
 
 	var matchingpool = "";
 	
@@ -1267,7 +1275,7 @@ function showPoolDetails(pool, loadbalancer){
 	if(matchingpool != ""){
 		
 		//Build the table and headers
-		$(".firstlayerdetailsheader").html(matchingpool.name);
+		$("." + layer + "layerdetailsheader").html(matchingpool.name);
 		
 		table = '<table class="pooldetailstable">';
 		table += '	<thead><tr><th>Member name</th><th>Member IP</th><th>Port</th><th>Priority group</td><th>Member availability</th><th>Enabled</th><th>Member Status description</th></tr></thead><tbody>';
@@ -1389,12 +1397,12 @@ function showPoolDetails(pool, loadbalancer){
 		}
 		
 		
-		$('#firstlayerdetailsfooter').html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'.lightbox\').fadeOut()">Close pool details</a><a href="javascript:void(0);" onMouseClick="" onMouseOver="javascript:showPoolShareLink(\'' + pool +'@' + loadbalancer + '\')" class="sharepoollink">Share pool details<p>CTRL + C to copy<br><input id="sharepoollink" value=""></p></a>');
+		$("#" + layer + "layerdetailsfooter").html('<a class="lightboxbutton" href="javascript:void(0);" onClick="javascript:$(\'.lightbox\').fadeOut()">Close pool details</a><a href="javascript:void(0);" onMouseClick="" onMouseOver="javascript:showPoolShareLink(\'' + pool +'@' + loadbalancer + '\')" class="sharepoollink">Share pool details<p>CTRL + C to copy<br><input id="sharepoollink" value=""></p></a>');
 
 	}
 
-	$("#firstlayerdetailscontentdiv").html(table);
-	$("#firstlayerdiv").fadeIn();
+	$("#" + layer + "layerdetailscontentdiv").html(table);
+	$("#" + layer + "layerdiv").fadeIn();
 
 }
 
