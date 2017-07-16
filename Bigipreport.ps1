@@ -127,6 +127,8 @@
 #		4.4.3		2017-07-09		Moved preferences to its own window 										Patrik Jonsson
 #		4.5.0		2017-07-12		Adding column toggle. Moving iRule selector to its own window.				Patrik Jonsson
 #									Optimizing css
+#		4.5.1		2017-07-15		Now also fetching information about the load balancers for future user 		Patrik Jonsson
+#		4.5.2		2017-07-16		Re-adding basic ASM support for load devices running version 12 and above.	Patrik Jonsson
 #
 #		To do:
 #		Add reset filters
