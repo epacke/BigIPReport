@@ -764,31 +764,32 @@ function cacheLTMinformation {
 
 	If($MajorVersion -gt 11){
 
-		log info "Getting ASM Policy information"
-		$AuthToken = Get-AuthToken -Loadbalancer $loadbalancername
+		#Check if ASM is enabled
+		if($ModuleDict.Keys -contains "ASM"){
+				log info "Getting ASM Policy information"
+			
+			$AuthToken = Get-AuthToken -Loadbalancer $loadbalancername
 
-		$headers = @{ "X-F5-Auth-Token" = $AuthToken; }
+			$headers = @{ "X-F5-Auth-Token" = $AuthToken; }
 
-		Write-Host "LB IP: " + $loadbalancerip
+			$Response = Invoke-WebRequest -Method "GET" -Headers $headers -Uri "https://$loadbalancerip/mgmt/tm/asm/policies"
+			$Policies = ($Response | ConvertFrom-Json).items
 
-		$Response = Invoke-WebRequest -Method "GET" -Headers $headers -Uri "https://$loadbalancerip/mgmt/tm/asm/policies"
-		$Policies = ($Response | ConvertFrom-Json).items
+			Foreach($Policy in $Policies){
 
-		Foreach($Policy in $Policies){
+				$objTempPolicy = New-Object -Type ASMPolicy
 
-			$objTempPolicy = New-Object -Type ASMPolicy
+				$objTempPolicy.name = $Policy.fullPath
+				$objTempPolicy.enforcementMode = $Policy.enforcementMode
+				$objTempPolicy.learningMode = $Policy.learningMode
+				$objTempPolicy.virtualServers = $Policy.virtualServers
+				$objTempPolicy.loadbalancer = $loadbalancername
 
-			$objTempPolicy.name = $Policy.fullPath
-			$objTempPolicy.enforcementMode = $Policy.enforcementMode
-			$objTempPolicy.learningMode = $Policy.learningMode
-			$objTempPolicy.virtualServers = $Policy.virtualServers
-			$objTempPolicy.loadbalancer = $loadbalancername
+				$LBASMpolicies += $objTempPolicy
+			}
 
-			$LBASMpolicies += $objTempPolicy
+			$Global:ASMPolicies += $LBASMPolicies
 		}
-
-		$Global:ASMPolicies += $LBASMPolicies
-
 	}
 
 	#EndRegion
@@ -1640,7 +1641,7 @@ Function Write-TemporaryFiles {
 
 #EndRegion
 
-#Region Check for missing data
+#Region Check for missing data and if the report contains ASM profiles
 if(-not (Test-ReportData)){
 	log error "Missing load balancer data, no report will be written"
 	Send-Errors
@@ -1648,6 +1649,12 @@ if(-not (Test-ReportData)){
 }
 
 log success "No missing loadbalancer data was detected, compiling the report"
+
+if(($virtualservers.asmPolicies | Where-Object { $_.count -gt 0 }).Count -gt 0){
+	$HasASMProfiles = $true
+} else {
+	$HasASMProfiles = $false
+}
 
 #EndRegion
 
@@ -1715,6 +1722,15 @@ $Global:html += @'
 					<th><input type="text" name="loadBalancer" value="Load Balancer" class="search_init" data-column-name="Load balancer" data-setting-name="showLoadBalancerColumn"/></th>
 					<th><input type="text" name="vipName" value="VIP Name" class="search_init" data-column-name="Virtual server" data-setting-name="showVirtualServerColumn"/></th>
 					<th><input type="text" name="ipPort" value="IP:Port" class="search_init" data-column-name="IP:Port" data-setting-name="showIPPortColumn" /></th>
+'@
+
+	if($HasASMProfiles){
+		$Global:html += @'
+					<th class="asmPoliciesHeaderCell"><input type="text" name="asmPolicies" size=6 value="ASM" class="search_init" data-column-name="ASM Policies" data-setting-name="showASMPoliciesColumn"/></th>
+'@
+	}
+
+		$Global:html += @'
 					<th class="sslProfileProfileHeaderCell"><input type="text" name="sslProfile" size=6 value="SSL" class="search_init" data-column-name="SSL Profile" data-setting-name="showSSLProfileColumn"/></th>
 					<th class="compressionProfileHeaderCell"><input type="text" name="compressionProfile" size=6 value="Compression" class="search_init" data-column-name="Compression Profile" data-setting-name="showCompressionProfileColumn" /></th>
 					<th class="persistenceProfileHeaderCell"><input type="text" name="persistenceProfile" size=6 value="Persistence" class="search_init" data-column-name="Persistence Profile" data-setting-name="showPersistenceProfileColumn"/></th>
@@ -1786,6 +1802,38 @@ foreach($LoadbalancerName in $BigIPDict.values){
 							$($vs.ip + ":" + $vs.port)
 						</td>
 "@
+		}
+
+		if($HasASMProfiles){
+
+			$Global:html += @"
+						<td class="centeredCell">
+"@
+
+			if($vs.asmPolicies.count -gt 0){
+				
+				for($i = 0; $i -lt $vs.asmPolicies.Count; $i++){
+					$ASMObj = $Global:ASMPolicies | Where-Object { $_.name -eq $vs.asmPolicies[$i] -and $_.loadbalancer -eq $vs.loadbalancer }
+
+					if($ASMObj.enforcementMode -eq "blocking"){
+						$vs.asmPolicies[$i] = $vs.asmPolicies[$i] + " (B)"
+					} else {
+						$vs.asmPolicies[$i] = $vs.asmPolicies[$i] + " (T)"
+					}
+				}
+
+				$Global:html += $vs.asmPolicies -Join "<br>"
+
+			} else {
+				$Global:html += @'
+							N/A
+'@
+			}
+
+			$Global:html += @"
+						</td>
+"@
+
 		}
 		
 		if($vs.sslprofile -ne "None"){

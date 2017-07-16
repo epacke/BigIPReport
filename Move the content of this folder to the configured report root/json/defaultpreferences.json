@@ -7,5 +7,6 @@
 	"showSSLProfileColumn" : true,
 	"showCompressionProfileColumn" : true,
 	"showPersistenceProfileColumn" : true,
-	"showPoolsMembersColumn" : true
+	"showPoolsMembersColumn" : true,
+	"showASMPoliciesColumn" : true
 }
