@@ -295,11 +295,11 @@ $(window).load(function() {
 
 					if( timesincerefresh > 240){
 						if(timesincelatestgeneration > 5){
-							$("#updateavailablespan").html('<a href="javascript:document.location.reload()" class="criticalupdateavailable">Report update available</a>');
+							$("#updateavailablespan").html('<a href="javascript:document.location.reload()" class="criticalupdateavailable">Update available</a>');
 						}
 					} else if ( timesincerefresh != 0){
 						if(timesincelatestgeneration > 5){
-							$("#updateavailablespan").html('<a href="javascript:document.location.reload()" class="updateavailable">Report update available</a>');
+							$("#updateavailablespan").html('<a href="javascript:document.location.reload()" class="updateavailable">Update available</a>');
 						}
 					}
 
