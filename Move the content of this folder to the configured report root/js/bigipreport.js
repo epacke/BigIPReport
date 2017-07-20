@@ -138,7 +138,7 @@ $(window).load(function() {
 		} );
 		
 		/* Initiate the syntax highlighting for irules*/
-		sh_highlightDocument('/js/', '.js');
+		sh_highlightDocument('./js/', '.js');
 		
 		/*************************************************************************************************************
 		
@@ -1029,7 +1029,7 @@ function showiRuleDetails(irule, loadbalancer){
 	//Add the div content to the page
 	$("#secondlayerdetailscontentdiv").html(divcontent);
 	//Add syntax highlighting
-	sh_highlightDocument('/js/', '.js');
+	sh_highlightDocument('./js/', '.js');
 	//Show the div
 	$("#secondlayerdiv").fadeIn();
 

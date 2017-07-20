@@ -129,6 +129,8 @@
 #									Optimizing css
 #		4.5.1		2017-07-15		Now also fetching information about the load balancers for future user 		Patrik Jonsson
 #		4.5.2		2017-07-16		Re-adding basic ASM support for load devices running version 12 and above.	Patrik Jonsson
+#       4.5.3       2017-07-20      Fixing a bug when highlighting irules and the js folder is not located      Patrik Jonsson
+#                                   in the root folder.
 #
 #		To do:
 #		Add reset filters
