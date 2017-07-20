@@ -138,7 +138,7 @@ $(window).load(function() {
 		} );
 		
 		/* Initiate the syntax highlighting for irules*/
-		sh_highlightDocument('/js/', '.js');
+		sh_highlightDocument('./js/', '.js');
 		
 		/*************************************************************************************************************
 		
@@ -295,11 +295,11 @@ $(window).load(function() {
 
 					if( timesincerefresh > 240){
 						if(timesincelatestgeneration > 5){
-							$("#updateavailablespan").html('<a href="javascript:document.location.reload()" class="criticalupdateavailable">Report update available</a>');
+							$("#updateavailablespan").html('<a href="javascript:document.location.reload()" class="criticalupdateavailable">Update available</a>');
 						}
 					} else if ( timesincerefresh != 0){
 						if(timesincelatestgeneration > 5){
-							$("#updateavailablespan").html('<a href="javascript:document.location.reload()" class="updateavailable">Report update available</a>');
+							$("#updateavailablespan").html('<a href="javascript:document.location.reload()" class="updateavailable">Update available</a>');
 						}
 					}
 
@@ -1029,7 +1029,7 @@ function showiRuleDetails(irule, loadbalancer){
 	//Add the div content to the page
 	$("#secondlayerdetailscontentdiv").html(divcontent);
 	//Add syntax highlighting
-	sh_highlightDocument('/js/', '.js');
+	sh_highlightDocument('./js/', '.js');
 	//Show the div
 	$("#secondlayerdiv").fadeIn();
 

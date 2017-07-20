@@ -127,6 +127,10 @@
 #		4.4.3		2017-07-09		Moved preferences to its own window 										Patrik Jonsson
 #		4.5.0		2017-07-12		Adding column toggle. Moving iRule selector to its own window.				Patrik Jonsson
 #									Optimizing css
+#		4.5.1		2017-07-15		Now also fetching information about the load balancers for future user 		Patrik Jonsson
+#		4.5.2		2017-07-16		Re-adding basic ASM support for load devices running version 12 and above.	Patrik Jonsson
+#       4.5.3       2017-07-20      Fixing a bug when highlighting irules and the js folder is not located      Patrik Jonsson
+#                                   in the root folder.
 #
 #		To do:
 #		Add reset filters
@@ -484,6 +488,8 @@ $Global:pools = @()
 $Global:nodes = @()
 $Global:monitors = @()
 $Global:DataGroupLists = @()
+$Global:loadBalancers = @()
+$Global:ASMPolicies = @()
 
 #Make sure the site root ends with \
 if(-not $Global:bigipreportconfig.Settings.ReportRoot.endswith("\")){
@@ -516,6 +522,7 @@ public class VirtualServer
 	public string[] pools;
 	public string sourcexlatetype;
 	public string sourcexlatepool;
+	public string[] asmPolicies;
 	public string loadbalancer;
 }
 '@
@@ -581,6 +588,74 @@ public class Datagrouplist {
 }
 '@
 
+Add-Type @'
+	using System.Collections;
+
+	public class Loadbalancer {
+		public string name;
+		public string version;
+		public string build;
+		public string baseBuild;
+		public string model;
+		public Hashtable modules;
+	}
+
+'@
+
+Add-Type @'
+
+	public class ASMPolicy {
+		public string name;
+		public string learningMode;
+		public string enforcementMode;
+		public string[] virtualServers;
+		public string loadbalancer;
+	}
+
+'@
+
+$Global:ModuleToShort = @{
+	"TMOS_MODULE_ASM" = "ASM";
+	"TMOS_MODULE_SAM" = "APM";
+	"TMOS_MODULE_WAM" = "WAM";
+	"TMOS_MODULE_WOM" = "WOM";
+	"TMOS_MODULE_LC" = "LC";
+	"TMOS_MODULE_LTM" = "LTM";
+	"TMOS_MODULE_GTM" = "GTM";
+	"TMOS_MODULE_WOML" = "WOML";
+	"TMOS_MODULE_APML" = "APML";
+	"TMOS_MODULE_EM" = "EM";
+	"TMOS_MODULE_VCMP" = "VCMP";
+	"TMOS_MODULE_UNKNOWN" = "UNKNOWN";
+	"TMOS_MODULE_TMOS" = "TMOS";
+	"TMOS_MODULE_HOST" = "HOST";
+	"TMOS_MODULE_UI" = "UI";
+	"TMOS_MODULE_MONITORS" = "MONITORS";
+	"TMOS_MODULE_AVR" = "AVR";
+ }
+ 
+$Global:ModuleToDescription = @{
+	"ASM" = "The Application Security Module.";
+	"APM" = "The Access Policy Module.";
+	"WAM" = "The Web Accelerator Module.";
+	"WOM" = "The WAN Optimization Module.";
+	"LC" = "The Link Controller Module.";
+	"LTM" = "The Local Traffic Manager Module.";
+	"GTM" = "The Global Traffic Manager Module.";
+	"UNKNOWN" = "The module is unknown (or unsupported by iControl).";
+	"WOML" = "The WAN Optimization Module (Lite).";
+	"APML" = "The Access Policy Module (Lite).";
+	"EM" = "The Enterprise Manager Module.";
+	"VCMP" = "The Virtual Clustered MultiProcessing Module.";
+	"TMOS" = "The Traffic Management part of the Core OS.";
+	"HOST" = "The non-Traffic Management = non-GUI part of the Core OS.";
+	"UI" = "The GUI part of the Core OS.";
+	"MONITORS" = "Represents the external monitors - used for stats only.";
+	"AVR" = "The Application Visualization and Reporting Module";
+}
+
+
+
 #Enable of disable the use of TLS1.2
 if($Global:Bigipreportconfig.Settings.UseTLS12 -eq $true){
 	log info "Enabling TLS1.2"
@@ -628,13 +703,12 @@ if($Global:Bigipreportconfig.Settings.NATFilePath -ne ""){
 function cacheLTMinformation {
 	Param(
 		$f5,
-		$loadbalancername
+		$loadbalancername,
+		$LoadbalancerIP
 	)
 	
 	$VersionInfo = $f5.SystemSystemInfo.get_product_information()
-	$MajorVersion = $VersionInfo.product_version.Split(".")[0]
-	$Minorversion = $VersionInfo.product_version.Split(".")[1]
-	
+
 	#Declare temporary objects for this load balancer
 	$LBVirtualservers = @()
 	$LBPools = @()
@@ -642,13 +716,88 @@ function cacheLTMinformation {
 	$LBmonitors = @()
 	$LBiRules = @()
 	$LBDataGroupLists = @()
+	$LBASMPolicies = @()
 	
 	#Regexp for parsing monitors from iRule definitions
 	[regex]$poolregexp = "pool\s+([a-zA-Z0-9_\-\./]+)"
 	
 	$f5.SystemSession.set_active_folder("/");
 	$f5.SystemSession.set_recursive_query_state("STATE_ENABLED");
-	
+
+
+	#Region Cache Load balancer information
+
+	log info "Fetching information about the device"
+	$loadBalancer = New-Object -Type Loadbalancer
+
+	#Get the version information
+	$versionInformation = $f5.SystemSoftwareManagement.get_all_software_status()
+
+	#Get provisioned modules
+	$modules = $f5.ManagementProvision.get_provisioned_list()
+
+	$loadBalancer.name = $loadbalancername
+	$loadBalancer.version = $versionInformation.version 
+	$loadBalancer.build = $versionInformation.build
+	$loadBalancer.baseBuild = $versionInformation.baseBuild
+
+	$ModuleDict = @{}
+
+	foreach($module in $modules){
+		$moduleCode = [string]$module
+
+		$moduleShortName = $ModuleToShort[$moduleCode]
+		$moduleDescription = $ModuleToDescription[$moduleShortName]
+
+		if($moduleShortName -eq $null) { $moduleShortName = "Unknown" }
+		if($moduleDescription -eq $null) { $moduleShortName = "Unknown" }
+
+		if(!($ModuleDict.keys -contains $moduleShortName)){
+			$ModuleDict.add($moduleShortName, $moduleDescription)
+		}
+	}
+
+	$LoadBalancer.modules = $ModuleDict
+
+	$MajorVersion = $loadBalancer.version.Split(".")[0]
+	$Minorversion = $loadBalancer.version.Split(".")[1]
+
+
+	$Global:loadBalancers += $loadBalancer
+
+
+	If($MajorVersion -gt 11){
+
+		#Check if ASM is enabled
+		if($ModuleDict.Keys -contains "ASM"){
+				log info "Getting ASM Policy information"
+			
+			$AuthToken = Get-AuthToken -Loadbalancer $loadbalancername
+
+			$headers = @{ "X-F5-Auth-Token" = $AuthToken; }
+
+			$Response = Invoke-WebRequest -Method "GET" -Headers $headers -Uri "https://$loadbalancerip/mgmt/tm/asm/policies"
+			$Policies = ($Response | ConvertFrom-Json).items
+
+			Foreach($Policy in $Policies){
+
+				$objTempPolicy = New-Object -Type ASMPolicy
+
+				$objTempPolicy.name = $Policy.fullPath
+				$objTempPolicy.enforcementMode = $Policy.enforcementMode
+				$objTempPolicy.learningMode = $Policy.learningMode
+				$objTempPolicy.virtualServers = $Policy.virtualServers
+				$objTempPolicy.loadbalancer = $loadbalancername
+
+				$LBASMpolicies += $objTempPolicy
+			}
+
+			$Global:ASMPolicies += $LBASMPolicies
+		}
+	}
+
+	#EndRegion
+
 	#Region Cache Node and monitor data
 	
 	#Cache information about iRules, nodes and monitors
@@ -1063,6 +1212,12 @@ function cacheLTMinformation {
 			#Hiding iRules to the users
 			$objTempVirtualServer.irules = @();
 		}
+
+		$VSASMPolicies = $LBASMPolicies | Where-Object { $_.virtualServers -contains $vsname }
+
+		if($VSASMPolicies -ne $null){
+			$objTempVirtualServer.asmPolicies = $VSASMPolicies.name
+		}
 		
 		$LBVirtualservers += $objTempVirtualServer
 
@@ -1099,6 +1254,46 @@ function cacheLTMinformation {
 	}
 	
 	#EndRegion
+}
+
+#EndRegion
+
+#Region Function Get-AuthToken
+
+Function Get-AuthToken {
+
+	Param($Loadbalancer)
+
+	$user = $Global:Bigipreportconfig.Settings.Credentials.Username
+	$Password = $Global:Bigipreportconfig.Settings.Credentials.Password
+
+	#Create the string that is converted to Base64
+	$pair = $user + ":" + $Password
+	 
+	#Encode the string to base64
+	$encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+	 
+	#Add the "Basic prefix"
+	$basicAuthValue = "Basic $encodedCreds"
+	 
+	#Prepare the headers
+	$headers = @{
+		"Authorization" = $basicAuthValue
+		"Content-Type" = "application/json"
+	}
+
+	#Create the body of the post
+	$body = @{"username" = $User; "password" = $Password; "loginProviderName" = "tmos" }
+	 
+	#Convert the body to Json
+	$body = $Body | ConvertTo-Json
+	 
+	$response  = Invoke-WebRequest -Method "POST" -Headers $headers -Body $body -Uri "https://$Loadbalancer/mgmt/shared/authn/login" 
+	 
+	#Extract the token from the response
+	$token = ($response.content | ConvertFrom-Json).Token.token
+ 	
+ 	Return $token
 }
 
 #EndRegion
@@ -1186,7 +1381,7 @@ foreach($LoadbalancerIP in $Global:Bigipreportconfig.Settings.Loadbalancers.Load
 		}
 	
 		log info "Caching LTM information from $BigIPHostname"
-		cacheLTMinformation -f5 $f5 -loadbalancername $BigIPHostname
+		cacheLTMinformation -f5 $f5 -loadbalancername $BigIPHostname -LoadbalancerIP $LoadbalancerIP
 		
 	} else {
 		log error "Failed to connect to $LoadbalancerIP"
@@ -1450,7 +1645,7 @@ Function Write-TemporaryFiles {
 
 #EndRegion
 
-#Region Check for missing data
+#Region Check for missing data and if the report contains ASM profiles
 if(-not (Test-ReportData)){
 	log error "Missing load balancer data, no report will be written"
 	Send-Errors
@@ -1458,6 +1653,12 @@ if(-not (Test-ReportData)){
 }
 
 log success "No missing loadbalancer data was detected, compiling the report"
+
+if(($virtualservers.asmPolicies | Where-Object { $_.count -gt 0 }).Count -gt 0){
+	$HasASMProfiles = $true
+} else {
+	$HasASMProfiles = $false
+}
 
 #EndRegion
 
@@ -1525,6 +1726,15 @@ $Global:html += @'
 					<th><input type="text" name="loadBalancer" value="Load Balancer" class="search_init" data-column-name="Load balancer" data-setting-name="showLoadBalancerColumn"/></th>
 					<th><input type="text" name="vipName" value="VIP Name" class="search_init" data-column-name="Virtual server" data-setting-name="showVirtualServerColumn"/></th>
 					<th><input type="text" name="ipPort" value="IP:Port" class="search_init" data-column-name="IP:Port" data-setting-name="showIPPortColumn" /></th>
+'@
+
+	if($HasASMProfiles){
+		$Global:html += @'
+					<th class="asmPoliciesHeaderCell"><input type="text" name="asmPolicies" size=6 value="ASM" class="search_init" data-column-name="ASM Policies" data-setting-name="showASMPoliciesColumn"/></th>
+'@
+	}
+
+		$Global:html += @'
 					<th class="sslProfileProfileHeaderCell"><input type="text" name="sslProfile" size=6 value="SSL" class="search_init" data-column-name="SSL Profile" data-setting-name="showSSLProfileColumn"/></th>
 					<th class="compressionProfileHeaderCell"><input type="text" name="compressionProfile" size=6 value="Compression" class="search_init" data-column-name="Compression Profile" data-setting-name="showCompressionProfileColumn" /></th>
 					<th class="persistenceProfileHeaderCell"><input type="text" name="persistenceProfile" size=6 value="Persistence" class="search_init" data-column-name="Persistence Profile" data-setting-name="showPersistenceProfileColumn"/></th>
@@ -1596,6 +1806,38 @@ foreach($LoadbalancerName in $BigIPDict.values){
 							$($vs.ip + ":" + $vs.port)
 						</td>
 "@
+		}
+
+		if($HasASMProfiles){
+
+			$Global:html += @"
+						<td class="centeredCell">
+"@
+
+			if($vs.asmPolicies.count -gt 0){
+				
+				for($i = 0; $i -lt $vs.asmPolicies.Count; $i++){
+					$ASMObj = $Global:ASMPolicies | Where-Object { $_.name -eq $vs.asmPolicies[$i] -and $_.loadbalancer -eq $vs.loadbalancer }
+
+					if($ASMObj.enforcementMode -eq "blocking"){
+						$vs.asmPolicies[$i] = $vs.asmPolicies[$i] + " (B)"
+					} else {
+						$vs.asmPolicies[$i] = $vs.asmPolicies[$i] + " (T)"
+					}
+				}
+
+				$Global:html += $vs.asmPolicies -Join "<br>"
+
+			} else {
+				$Global:html += @'
+							N/A
+'@
+			}
+
+			$Global:html += @"
+						</td>
+"@
+
 		}
 		
 		if($vs.sslprofile -ne "None"){
