@@ -874,7 +874,7 @@ if($Global:Bigipreportconfig.Settings.NATFilePath -ne ""){
 			if($ArrLine.Count -eq 2){
 				$Global:NATdict[$arrLine[1]] = $arrLine[0]
 			 } else {
-			 	log error "Malformed NAT file content detected: Check $_"
+				log error "Malformed NAT file content detected: Check $_"
 			 }
 		}
 
@@ -1613,7 +1613,7 @@ Function Get-AuthToken {
 	#Extract the token from the response
 	$Token = ($Response.content | ConvertFrom-Json).Token.token
 
- 	Return $Token
+	Return $Token
 }
 
 #EndRegion
@@ -2240,6 +2240,7 @@ $Global:HTML = @'
 <html>
 	<head>
 		<title>BIG-IP Report</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 		<script src="js/pace.js" data-pace-options='{ "restartOnRequestAfter": false }'></script>
 		<script src="js/jquery.min.js"></script>
 		<script src="js/jquery.dataTables.min.js"></script>
@@ -2311,7 +2312,7 @@ $Global:HTML += @'
 	#Show the div used to contain information generating by clicking at pool members
 	$Global:HTML += @'
 
-		<div id='allbigipsdiv' class="lbdiv" style="position:absolute;visibility:visible;width:100%";>
+		<div id='allbigipsdiv' class="lbdiv" style="position:absolute;visibility:visible;width:100%;">
 		<table id="allbigips" class="bigiptable">
 			<thead>
 				<tr>
@@ -2347,12 +2348,12 @@ if($RealTimeStatusDetected){
 	log verbose "Status vips detected in the configuration, simplified icons will be used for the whole report"
 }
 
+$i=0
+
 ForEach($LoadBalancerObjects in ($Global:ReportObjects.Values | Where-Object { $_.LoadBalancer.active -or $_.LoadBalancer.isonlydevice })){
 
 	$LoadBalancer = $LoadBalancerObjects.LoadBalancer
 	$LoadBalancerName = $LoadBalancer.name
-
-	$i = 0
 
 	$VirtualServers = $LoadBalancerObjects.VirtualServers.Values + $LoadBalancerObjects.OrphanPools
 	$VirtualServerCount = $VirtualServers.Count
@@ -2368,7 +2369,7 @@ ForEach($LoadBalancerObjects in ($Global:ReportObjects.Values | Where-Object { $
 		$Global:HTML += @"
 
 					<tr class="virtualserverrow">
-						<td class="loadbalancerCell" NOWRAP data-loadbalancer="$LoadBalancerName">
+						<td class="loadbalancerCell" data-loadbalancer="$LoadBalancerName">
 							$(
 								if($Global:Bigipreportconfig.Settings.HideLoadBalancerFQDN -eq $true){
 									$LoadBalancerName.split('.')[0]
@@ -2413,14 +2414,14 @@ ForEach($LoadBalancerObjects in ($Global:ReportObjects.Values | Where-Object { $
 
 			if($ObjVirtualServer.asmPolicies.count -gt 0){
 
-				for($i = 0; $i -lt $ObjVirtualServer.asmPolicies.Count; $i++){
+				for($asm = 0; $asm -lt $ObjVirtualServer.asmPolicies.Count; $asm++){
 
-					$ObjASMPolicy = $LoadBalancerObjects.ASMPolicies[$ObjVirtualServer.asmPolicies[$i]]
+					$ObjASMPolicy = $LoadBalancerObjects.ASMPolicies[$ObjVirtualServer.asmPolicies[$asm]]
 
 					if($ObjASMPolicy.enforcementMode -eq "blocking"){
-						$ObjVirtualServer.asmPolicies[$i] = $ObjVirtualServer.asmPolicies[$i] + " (B)"
+						$ObjVirtualServer.asmPolicies[$asm] = $ObjVirtualServer.asmPolicies[$asm] + " (B)"
 					} else {
-						$ObjVirtualServer.asmPolicies[$i] = $ObjVirtualServer.asmPolicies[$i] + " (T)"
+						$ObjVirtualServer.asmPolicies[$asm] = $ObjVirtualServer.asmPolicies[$asm] + " (T)"
 					}
 
 				}
