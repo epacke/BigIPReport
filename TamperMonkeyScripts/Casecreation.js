@@ -12,8 +12,8 @@
 
 /*
 
-	Documentation of the options 
-	
+	Documentation of the options
+
 	hideModulesByDefault:
 	Hides modules you don't have installed. Please report if you see any missing modules.
 
@@ -74,8 +74,8 @@
                 var deviceToSerialSelectionHTML = getDeviceSelectionDropDown(devices);
 
                 if(options.hideModulesByDefault){
-                	filterModuleSelection(modules);	
-                }             	
+                	filterModuleSelection(modules);
+                }
 
 	            if(options.hideVersionsByDefault){
                 	filterVersionSelection(availableVersions);
@@ -99,7 +99,7 @@
 
                 			triggerEvent("change", "input#serialNumberInput");
 							triggerEvent("blur", "input#serialNumberInput");
-							
+
                 		});
 
                 		if(options.defaultSeverityEnabled){
@@ -127,7 +127,7 @@
                 	triggerEvent("change", "select#contactMethodOfContact");
 
                 	$("select#contactTimezoneSelect option").eq(options.timeZone).attr("selected", true);
-					triggerEvent("change", "select#contactTimezoneSelect");                	
+					triggerEvent("change", "select#contactTimezoneSelect");
 
                 }, 500);
             }
@@ -153,7 +153,7 @@ function triggerEvent(e, s){
 function filterModuleSelection(configuredModules){
 	"use strict";
 	var moduleFilterInterval = setInterval(function(){
-		
+
 		var productSelect = $("select#productSelect");
 
 		if(productSelect.find("option").length > 10){
