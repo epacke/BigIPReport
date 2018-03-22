@@ -1,8 +1,8 @@
 when HTTP_REQUEST {
-	
-    set poolname [HTTP::path]  
 
-    if { [catch { 
+    set poolname [HTTP::path]
+
+    if { [catch {
         set poolmembers [members -list $poolname]
 
         set returnjson "\{\n\t\"success\"\:true,\n\t\"poolname\": \"$poolname\",\n\t\"memberstatuses\": \{"
@@ -34,5 +34,5 @@ when HTTP_REQUEST {
                         \t\}\n\
                     \}" Content-Type application/json Access-Control-Allow-Origin "*" Connection Close
     }
-	
+
 }
