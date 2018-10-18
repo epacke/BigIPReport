@@ -1013,9 +1013,7 @@
 				}
 			}, {
 				"className": "centeredCell",
-				"render": function (data, type, row) {
-					return row.description;
-				}
+				"data": "description"
 			}, {
 					"className": "centeredCell",
 					"render": function (data, type, row) {
