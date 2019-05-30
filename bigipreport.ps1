@@ -231,6 +231,13 @@
 #                                     Adding description column.                                                    Patrik Jonsson
 #                                     Fixing typo, improving CSS.                                                   Tim Riker
 #        5.2.3        2018-10-26      Fixing typo that broke the data group list generation.                        Tim Riker       No
+#        5.2.4        2019-05-28      Fixing short links in device menu                                             Tim Riker       No
+#        5.2.5        2019-05-30      Fixing bug with the direct links to the pool section not working              Patrik Jonsson  No
+#                                     Fixing bug with the certificate table always showing direct links
+#                                     Removed the optional export section since it's added by default
+#                                     Adding padding to sections that is not using data tables
+#                                     Adding a more consistent style to the export buttons
+#
 #
 #        This script generates a report of the LTM configuration on F5 BigIP's.
 #        It started out as pet project to help co-workers know which traffic goes where but grew.
