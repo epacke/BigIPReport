@@ -2197,11 +2197,6 @@ $Global:HTML = [System.Text.StringBuilder]::new()
         } else {
             [void]$Global:HTML.AppendLine("const ShowDataGroupLinks = false;")
         }
-        if($Global:Bigipreportconfig.Settings.ExportLink.Enabled -eq $true){
-            [void]$Global:HTML.AppendLine("const ShowExportLink = true;")
-        } else {
-            [void]$Global:HTML.AppendLine("const ShowExportLink = false;")
-        }
         if($Global:Bigipreportconfig.Settings.HideLoadBalancerFQDN -eq $true){
             [void]$Global:HTML.AppendLine("const HideLoadBalancerFQDN = true;")
         } else {

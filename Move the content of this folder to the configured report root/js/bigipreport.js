@@ -841,6 +841,9 @@
                     case "virtualservers":
                         showVirtualServers(updatehash);
                         break;
+                    case "pools":
+                        showPools(updatehash);
+                        break;
                     case "irules":
                         showiRules(updatehash);
                         break;
@@ -1093,33 +1096,38 @@
                 "sSearch": "Search all columns:"
             },
             "dom": 'fBrtilp',
-            "buttons": [
-                {
-                    "extend": "copyHtml5",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "export"
-                    }
-                },
-                {
-                    "extend": "print",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "print"
-                    }
-                },
-                {
-                    "extend": "csvHtml5",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "export"
+            "buttons": {
+                "buttons": [
+                    {
+                        "extend": "copyHtml5",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "export"
+                        }
                     },
-                    "customize": customizeCSV
-                }
-            ],
+                    {
+                        "extend": "print",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "print"
+                        }
+                    },
+                    {
+                        "extend": "csvHtml5",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "export"
+                        },
+                        "customize": customizeCSV
+                    }
+                ]
+            },
             "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
         });
 
@@ -1214,16 +1222,6 @@
 
             updateLocationHash();
         });
-
-        /*************************************************************************************************************
-
-            This section inserts a button that exports the report to CSV
-
-        **************************************************************************************************************/
-
-        if (ShowExportLink) {
-            $("#allbigips_filter").append('<a id="exportCSVButton" class="exportCSVButton" href="javascript:downloadCSV();">Export to CSV</a>');
-        }
 
         /*************************************************************************************************************
 
@@ -1452,34 +1450,39 @@
                 "sSearch": "Search all columns:"
             },
             "dom": 'fBrtilp',
-            "buttons": [
-                "columnsToggle",
-                {
-                    "extend": "copyHtml5",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "export"
-                    }
-                },
-                {
-                    "extend": "print",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "print"
-                    }
-                },
-                {
-                    "extend": "csvHtml5",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "export"
+            "buttons": {
+                "buttons": [
+                    "columnsToggle",
+                    {
+                        "extend": "copyHtml5",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "export"
+                        }
                     },
-                    "customize": customizeCSV
-                }
-            ],
+                    {
+                        "extend": "print",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "print"
+                        }
+                    },
+                    {
+                        "extend": "csvHtml5",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "export"
+                        },
+                        "customize": customizeCSV
+                    }
+                ],
+            },
             "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
         });
 
@@ -1592,34 +1595,39 @@
                 "sSearch": "Search all columns:"
             },
             "dom": 'fBrtilp',
-            "buttons": [
-                "columnsToggle",
-                {
-                    "extend": "copyHtml5",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "export"
-                    }
-                },
-                {
-                    "extend": "print",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "print"
-                    }
-                },
-                {
-                    "extend": "csvHtml5",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "export"
+            "buttons": {
+                "buttons": [
+                    "columnsToggle",
+                    {
+                        "extend": "copyHtml5",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "export"
+                        }
                     },
-                    "customize": customizeCSV
-                }
-            ],
+                    {
+                        "extend": "print",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "print"
+                        }
+                    },
+                    {
+                        "extend": "csvHtml5",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "export"
+                        },
+                        "customize": customizeCSV
+                    }
+                ],
+            },
             "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
         });
 
@@ -1749,34 +1757,39 @@
                 "sSearch": "Search all columns:"
             },
             "dom": 'fBrtilp',
-            "buttons": [
-                "columnsToggle",
-                {
-                    "extend": "copyHtml5",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "export"
-                    }
-                },
-                {
-                    "extend": "print",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "print"
-                    }
-                },
-                {
-                    "extend": "csvHtml5",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "export"
+            "buttons": {
+                "buttons": [
+                    "columnsToggle",
+                    {
+                        "extend": "copyHtml5",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "export"
+                        }
                     },
-                    "customize": customizeCSV
-                }
-            ],
+                    {
+                        "extend": "print",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "print"
+                        }
+                    },
+                    {
+                        "extend": "csvHtml5",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "export"
+                        },
+                        "customize": customizeCSV
+                    }
+                ],
+            },
             "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
         });
 
@@ -1901,34 +1914,39 @@
                 "sSearch": "Search all columns:"
             },
             "dom": 'fBrtilp',
-            "buttons": [
-                "columnsToggle",
-                {
-                    "extend": "copyHtml5",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "export"
-                    }
-                },
-                {
-                    "extend": "print",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "print"
-                    }
-                },
-                {
-                    "extend": "csvHtml5",
-                    "exportOptions": {
-                        "columns": ":visible",
-                        "stripHtml": false,
-                        "orthogonal": "export"
+            "buttons": {
+                "buttons": [
+                    "columnsToggle",
+                    {
+                        "extend": "copyHtml5",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "export"
+                        }
                     },
-                    "customize": customizeCSV
-                }
-            ],
+                    {
+                        "extend": "print",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "print"
+                        }
+                    },
+                    {
+                        "extend": "csvHtml5",
+                        "className": "exportCSVButton",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "export"
+                        },
+                        "customize": customizeCSV
+                    }
+                ]
+            },
             "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
         });
 
@@ -1949,7 +1967,7 @@
             });
         });
 
-        // reset filters button and handlers
+        // Reset filters button and handlers
         $("#certificateTable_filter").append("<a id=\"resetCertificateFiltersButton\" class=\"resetFiltersButton\" href=\"javascript:void(0);\">Reset filters</a>")
 
         $("#resetCertificateFiltersButton").on("click", function () {
@@ -1959,11 +1977,13 @@
                 .draw();
         });
 
-        // highlight matches
+        // Highlight matches
         siteData.certificateTable.on('draw', function () {
             highlightAll(siteData.certificateTable);
             toggleAdcLinks();
         });
+
+        siteData.certificateTable.draw();
     }
 
     function hideMainSection() {

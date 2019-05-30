@@ -26,8 +26,8 @@
         -->
 
         <Credentials>
-            <Username></Username>
-            <Password></Password>
+            <Username>admin</Username>
+            <Password>admin</Password>
         </Credentials>
 
         <!--
@@ -56,9 +56,8 @@
 
         <DeviceGroups>
             <DeviceGroup>
-                <Name></Name>
-                <Device></Device>
-                <Device></Device>
+                <Name>f501.j.local</Name>
+                <Device>192.168.70.117</Device>
                 <StatusVip></StatusVip>
             </DeviceGroup>
         </DeviceGroups>
@@ -76,7 +75,7 @@
         **************************************************************************************************************************************
         -->
 
-        <ReportRoot></ReportRoot>
+        <ReportRoot>C:\inetpub\wwwroot\</ReportRoot>
 
         <!--
         **************************************************************************************************************************************
@@ -93,7 +92,7 @@
         **************************************************************************************************************************************
         -->
 
-        <DefaultDocument>index.html</DefaultDocument>
+        <DefaultDocument>default.htm</DefaultDocument>
 
         <!--
         ************************************************************
@@ -379,29 +378,6 @@
                 <ShowiRuleLinks>true</ShowiRuleLinks>
                 <ShowDataGroupLinks>true</ShowDataGroupLinks>
             </iRules>
-
-        <!--
-
-            ***********************************************************************************************************************************************
-            *
-            *    Export link settings
-            *
-            *    Enabled:
-            *    <ExportLink>
-            *        <Enabled>true</Enabled>
-            *    </ExportLink>
-            *
-            *    Disabled:
-            *    <ExportLink>
-            *        <Enabled>false</Enabled>
-            *    </ExportLink>            *
-            ************************************************************************************************************************************************
-
-        -->
-
-        <ExportLink>
-            <Enabled>false</Enabled>
-        </ExportLink>
 
         <!--
 

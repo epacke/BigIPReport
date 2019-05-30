@@ -510,7 +510,7 @@ a:hover.monitortest p {
     text-decoration: none;
 }
 
-a.irulesButton, a.iRuleButton, a.exportCSVButton, a.lightboxbutton {
+a.irulesButton, a.iRuleButton, a.exportCSVButton, button.exportCSVButton, a.lightboxbutton {
     position: relative;
     display: inline;
     background: #33699d;
@@ -524,6 +524,10 @@ a.irulesButton, a.iRuleButton, a.exportCSVButton, a.lightboxbutton {
     color: #ffffff;
     margin: 5px;
     text-decoration: none;
+}
+
+button.exportCSVButton {
+    line-height: 0.9;
 }
 
 a.irulesButton, a.iRuleButton, a.exportCSVButton {
@@ -898,6 +902,7 @@ table#deviceoverviewtable {
     font-size: 16px;
     margin: 0 auto;
     width: 95%;
+    margin: 10px 0px 10px 0px;
 }
 
 table#deviceoverviewtable tbody tr td {
@@ -947,6 +952,10 @@ span.devicepollingnotconfigured {
 /****************************************************************************************************************************
     This section contains the style for the preferences
 *****************************************************************************************************************************/
+
+div#preferences {
+    margin: 10px 10px 10px 10px;
+}
 
 table#preferencestable {
     font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -1015,6 +1024,9 @@ tr.certificateExpiringIn14 {
 /****************************************************************************************************************************
     This section contains the style for the log content
 *****************************************************************************************************************************/
+div#reportlogs {
+    margin: 10px 0px 10px 0px;
+}
 
 table#reportlogstable {
     font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -1199,9 +1211,16 @@ span.adcLinkSpan a:hover {
     font-family: Arial;
     color: #fff;
     font-size: 12px;
-    padding: 4px 8px 4px 8px;
     margin-left: 5px;
     text-decoration: none;
+}
+
+.visibleColumnButton {
+    padding: 8px 8px 8px 8px;
+}
+
+button.dt-button.buttons-columnVisibility.active {
+    padding: 4px 8px 4px 8px;
 }
 
 .visibleColumnButton:hover, button.dt-button.buttons-columnVisibility.active:hover {
@@ -1235,7 +1254,7 @@ span.adcLinkSpan a:hover {
     text-decoration: none;
 }
 
-.resetFiltersButton, button.dt-button.buttons-html5, button.dt-button.buttons-print {
+.resetFiltersButton {
     background: #f5f5f5;
     background-image: -webkit-linear-gradient(top, #f5f5f5, #c2c2c2);
     background-image: -moz-linear-gradient(top, #f5f5f5, #c2c2c2);
