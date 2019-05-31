@@ -237,7 +237,13 @@
 #                                     Removed the optional export section since it's added by default
 #                                     Adding padding to sections that is not using data tables
 #                                     Adding a more consistent style to the export buttons
-#
+#        5.2.6        2019-05-31      Replaced the column toggle buttons in the virtual server view with            Patrik Jonsson  No
+#                                     Data tables standard columns
+#                                     Replaced the column filters with DataTables standard column filters
+#                                     Fixed a bug with the pool expansion function expanding everything
+#                                     when search string is empty
+#                                     Fixed a bug with the certificate reset button not working due to
+#                                     misspelled css selector
 #
 #        This script generates a report of the LTM configuration on F5 BigIP's.
 #        It started out as pet project to help co-workers know which traffic goes where but grew.

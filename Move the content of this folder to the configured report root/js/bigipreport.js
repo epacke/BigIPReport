@@ -950,33 +950,24 @@
         }
 
         var content = `
-        <div id="allbigipsdiv" class="lbdiv">
+
             <table id="allbigips" class="bigiptable">
                 <thead>
                     <tr>
-                        <th class="loadbalancerHeaderCell"><input type="text" name="loadBalancer" value="Load Balancer"
-                            class="search_init" data-column-name="Load Balancer" data-setting-name="showLoadBalancerColumn"/></th>
-                        <th><input type="text" name="vipName" value="VIP Name" class="search_init" data-column-name="Virtual server"
-                            data-setting-name="showVirtualServerColumn"/></th>
-                        <th><input type="text" name="vipDescription" value="Description" class="search_init" data-column-name="Description"
-                            data-setting-name="showDescriptionColumn"/></th>
-                        <th><input type="text" name="ipPort" value="IP:Port" class="search_init" data-column-name="IP:Port" data-setting-name="showIPPortColumn" /></th>
-                        <th><input type="text" name="asmPolicies" size="6" value="ASM" class="search_init" data-column-name="ASM Policies"
-                            data-setting-name="showASMPoliciesColumn"/></th>
-                        <th class="sslProfileHeaderCell"><input type="text" name="sslProfile" size="6" value="SSL C/S" class="search_init"
-                            data-column-name="SSL Profile" data-setting-name="showSSLProfileColumn"/></th>
-                        <th class="compressionProfileHeaderCell"><input type="text" name="compressionProfile" size="6" value="Compression"
-                            class="search_init" data-column-name="Compression Profile" data-setting-name="showCompressionProfileColumn" /></th>
-                        <th class="persistenceProfileHeaderCell"><input type="text" name="persistenceProfile" size="6" value="Persistence"
-                            class="search_init" data-column-name="Persistence Profiles" data-setting-name="showPersistenceProfileColumn"/></th>
-                        <th><input type="text" name="pool_members" value="Pool/Members" class="search_init" data-column-name="Pools/Members"
-                            data-setting-name="showPoolsMembersColumn"/></th>
+                        <th class="loadbalancerHeaderCell"><span style="display: none;">Load Balancer</span><input type="text" class="search" placeholder="Load Balancer" /></th>
+                        <th><span style="display: none;">Name</span><input type="text" class="search" placeholder="Name" /></th>
+                        <th><span style="display: none;">Description</span><input type="text" class="search" placeholder="Description" /></th>
+                        <th><span style="display: none;">IP:Port</span><input type="text" class="search" placeholder="IP:port" /></th>
+                        <th><span style="display: none;">ASM Policies</span><input type="text" class="search" placeholder="ASM Policies" /></th>
+                        <th><span style="display: none;">SSL Profile</span><input type="text" class="search" placeholder="SSL Profile" /></th>
+                        <th><span style="display: none;">Compression Profile</span><input type="text" class="search" placeholder="Compression Profile" /></th>
+                        <th><span style="display: none;">Persistence Profile</span><input type="text" class="search" placeholder="Persistence Profile" /></th>
+                        <th><span style="display: none;">Pool/Members</span><input type="text" class="search" placeholder="Pool/Members" /></th>
                     </tr>
                 </thead>
                 <tbody>
                 </tbody>
-            </table>
-        </div>`;
+            </table>`;
 
         $("div#virtualservers").html(content);
 
@@ -986,10 +977,6 @@
             Initiate data tables, add a search all columns header and save the standard table header values
 
         **************************************************************************************************************/
-
-        $("table#allbigips thead input.search_init").each(function (i) {
-            asInitVals[i] = this.value;
-        });
 
 
         siteData.bigipTable = $('table#allbigips').DataTable({
@@ -1099,8 +1086,23 @@
             "buttons": {
                 "buttons": [
                     {
+                        "text": 'Reset filters',
+                        "className": "tableHeaderColumnButton resetFilters",
+                        "action": function ( e, dt, node, config ) {
+
+                            $("table#allbigips thead th input[type='search']").val("");
+
+                            siteData.bigipTable.search('')
+                                .columns().search('')
+                                .draw();
+
+                            updateLocationHash();
+                        }
+                    },
+                    "columnsToggle",
+                    {
                         "extend": "copyHtml5",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1109,7 +1111,7 @@
                     },
                     {
                         "extend": "print",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1118,13 +1120,8 @@
                     },
                     {
                         "extend": "csvHtml5",
-                        "className": "exportCSVButton",
-                        "exportOptions": {
-                            "columns": ":visible",
-                            "stripHtml": false,
-                            "orthogonal": "export"
-                        },
-                        "customize": customizeCSV
+                        "className": "tableHeaderColumnButton exportFunctions",
+                        "action": downloadCSV
                     }
                 ]
             },
@@ -1138,175 +1135,37 @@
 
         ******************************************************************************************************************************/
 
-        //Expand pool matches  and hightlight them
+        //Prevents sorting the columns when clicking on the sorting headers
+        $('table#allbigips thead th input').on('click', function (e) {
+            e.stopPropagation();
+        });
+
+        // Apply the search
+        siteData.bigipTable.columns().every( function () {
+            var that = this;
+            $( 'input', this.header() ).on( 'keyup change', function () {
+                if ( that.search() !== this.value ) {
+                    that
+                        .search( this.value )
+                        .draw();
+                }
+            });
+        });
+
+        // highlight matches
         siteData.bigipTable.on('draw', function () {
-
-            var body = $(siteData.bigipTable.table().body());
-
             highlightAll(siteData.bigipTable);
-
-
+            expandPoolMatches(siteData.bigipTable.table().body(), siteData.bigipTable.search());
             hidePools();
-            toggleColumns();
+            //toggleColumns(); // Can be removed?
             toggleAdcLinks();
-
+            
             if (siteData.bigipTable.search() != "") {
                 expandPoolMatches(body, siteData.bigipTable.search());
             }
 
             setPoolTableCellWidth();
-
-        });
-
-        // is wheelmouse paging useful?
-        /*
-        $('table#allbigips tbody').bind('wheel', (e) => {
-            var dir = e.originalEvent.deltaY < 0 ? 'previous' : 'next';
-            siteData.bigipTable.page(dir).draw(false);
-            return false;
-        });
-        */
-
-        /*************************************************************************************************************
-
-            Attaches a function to the main data table column filters that
-            removes the text from the input windows when clicking on them
-            and adds the possibility to filter per column
-
-        **************************************************************************************************************/
-
-        $("table#allbigips thead input").focus(function () {
-            if (this.classList.contains("search_init")) {
-                this.className = "search_entered";
-                this.value = "";
-            }
-        });
-
-        //Prevents sorting the columns when clicking on the sorting headers
-        $('table#allbigips .search_init').on('click', function (e) {
-            e.stopPropagation();
-        });
-
-        $('table#allbigips .search_entered').on('click', function (e) {
-            e.stopPropagation();
-        });
-
-
-        $("table#allbigips thead input").blur(function (i) {
-            if (this.value == "") {
-                this.className = "search_init";
-                this.value = asInitVals[$("thead input").index(this)];
-            }
-        });
-
-        /*************************************************************************************************************
-
-            This section inserts the reset filters button and it's handlers
-
-        **************************************************************************************************************/
-
-        $("#allbigips_filter").append("<a id=\"resetFiltersButton\" class=\"resetFiltersButton\" href=\"javascript:void(0);\">Reset filters</a>")
-
-        $("#resetFiltersButton").on("click", function () {
-
-            $("table#allbigips thead th input[type='search']").val("");
-
-            $("table#allbigips thead th input").each(function () {
-                this.className = "search_init";
-                this.value = asInitVals[$("table#allbigips thead input").index(this)];
-            });
-
-            siteData.bigipTable.search('')
-                .columns().search('')
-                .draw();
-
-            updateLocationHash();
-        });
-
-        /*************************************************************************************************************
-
-            This section inserts the column toggle buttons and attaches even handlers to it
-
-        **************************************************************************************************************/
-
-        $("#allbigips_filter").append("<div style=\"float:right\"><span id=\"toggleHeader\">Toggle columns:<span><span id=\"columnToggleButtons\"></span></div>")
-
-        $("#allbigips thead th input").each(function () {
-
-            var columnID = $(this).attr("data-setting-name");
-
-            var toggleLinkData = "";
-
-            if (localStorage.getItem(columnID) === "true") {
-                buttonClass = "visibleColumnButton";
-            } else {
-                buttonClass = "hiddenColumnButton";
-            }
-
-            toggleLinkData += "<a href=\"javascript:void(0)\" class=\"" + buttonClass + "\" id=\"" + columnID + "\">" + $(this).attr("data-column-name") + "</a>";
-
-            $("#columnToggleButtons").append(toggleLinkData);
-
-            $("#" + columnID).on("click", function () {
-
-                var preferenceName = $(this).attr("id")
-
-                if (localStorage.getItem(preferenceName) === "false") {
-                    $(this).addClass("visibleColumnButton").removeClass("hiddenColumnButton");
-                    localStorage.setItem(preferenceName, "true");
-                } else {
-                    $(this).addClass("hiddenColumnButton").removeClass("visibleColumnButton");
-                    localStorage.setItem(preferenceName, "false");
-                }
-
-                toggleColumns();
-
-            });
-
-        });
-
-        //This section handles the global search
-        $('div#allbigips_filter.dataTables_filter input').off('keyup.DT input.DT');
-
-        // Set-up search delays
-        var delay = (function () {
-
-            var timer = 0;
-
-            return function (callback, ms) {
-                clearTimeout(timer);
-                timer = setTimeout(callback, ms);
-            };
-        })();
-
-        $('div#allbigips_filter.dataTables_filter input').on('keyup input', function () {
-            var search = $('div#allbigips_filter.dataTables_filter input').val();
-            delay(function () {
-                if (search != null) {
-                    updateLocationHash();
-                    siteData.bigipTable.search(search).draw();
-                }
-            }, 700);
-        });
-
-        //Filter columns on key update and adding search delay
-        siteData.bigipTable.columns().every(function () {
-
-            var that = this;
-
-            $('input', this.header()).on('keyup change', function () {
-
-                var search = this.value
-                delay(function () {
-                    updateLocationHash();
-                    that
-                        .search(search)
-                        .draw();
-                    expandPoolMatches($(siteData.bigipTable.table().body()), search);
-                    highlightAll(siteData.bigipTable);
-                }, 700);
-            });
-
+        
         });
 
         /*************************************************************************************************************
@@ -1452,10 +1311,22 @@
             "dom": 'fBrtilp',
             "buttons": {
                 "buttons": [
+                    {
+                        "text": 'Reset filters',
+                        "className": "tableHeaderColumnButton resetFilters",
+                        "action": function ( e, dt, node, config ) {
+
+                            $("table#iRuleTable thead th input").val("");
+                            siteData.iRuleTable.search('')
+                                .columns().search('')
+                                .draw();
+
+                        }
+                    },
                     "columnsToggle",
                     {
                         "extend": "copyHtml5",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1464,7 +1335,7 @@
                     },
                     {
                         "extend": "print",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1473,7 +1344,7 @@
                     },
                     {
                         "extend": "csvHtml5",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1501,16 +1372,6 @@
                         .draw();
                 }
             });
-        });
-
-        // reset filters button and handlers
-        $("#iRuleTable_filter").append("<a id=\"resetiRuleFiltersButton\" class=\"resetFiltersButton\" href=\"javascript:void(0);\">Reset filters</a>")
-
-        $("#resetiRuleFiltersButton").on("click", function () {
-            $("table#iRuleTable thead th input").val("");
-            siteData.iRuleTable.search('')
-                .columns().search('')
-                .draw();
         });
 
         // highlight matches
@@ -1597,10 +1458,22 @@
             "dom": 'fBrtilp',
             "buttons": {
                 "buttons": [
+                    {
+                        "text": 'Reset filters',
+                        "className": "tableHeaderColumnButton resetFilters",
+                        "action": function ( e, dt, node, config ) {
+
+                            $("table#poolTable thead th input").val("");
+                            siteData.poolTable.search('')
+                                .columns().search('')
+                                .draw();
+
+                        }
+                    },
                     "columnsToggle",
                     {
                         "extend": "copyHtml5",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1609,7 +1482,7 @@
                     },
                     {
                         "extend": "print",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1618,7 +1491,7 @@
                     },
                     {
                         "extend": "csvHtml5",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1646,16 +1519,6 @@
                         .draw();
                 }
             });
-        });
-
-        // reset filters button and handlers
-        $("#poolTable_filter").append("<a id=\"resetPoolFiltersButton\" class=\"resetFiltersButton\" href=\"javascript:void(0);\">Reset filters</a>")
-
-        $("#resetPoolFiltersButton").on("click", function () {
-            $("table#poolTable thead th input").val("");
-            siteData.poolTable.search('')
-                .columns().search('')
-                .draw();
         });
 
         // highlight matches
@@ -1759,10 +1622,22 @@
             "dom": 'fBrtilp',
             "buttons": {
                 "buttons": [
+                    {
+                        "text": 'Reset filters',
+                        "className": "tableHeaderColumnButton resetFilters",
+                        "action": function ( e, dt, node, config ) {
+
+                            $("table#dataGroupTable thead th input").val("");
+                            siteData.dataGroupTable.search('')
+                                .columns().search('')
+                                .draw();
+
+                        }
+                    },
                     "columnsToggle",
                     {
                         "extend": "copyHtml5",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1771,7 +1646,7 @@
                     },
                     {
                         "extend": "print",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1780,7 +1655,7 @@
                     },
                     {
                         "extend": "csvHtml5",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1808,16 +1683,6 @@
                         .draw();
                 }
             });
-        });
-
-        // reset filters button and handlers
-        $("#dataGroupTable_filter").append("<a id=\"resetDataGroupFiltersButton\" class=\"resetFiltersButton\" href=\"javascript:void(0);\">Reset filters</a>")
-
-        $("#resetDataGroupFiltersButton").on("click", function () {
-            $("table#dataGroupTable thead th input").val("");
-            siteData.dataGroupTable.search('')
-                .columns().search('')
-                .draw();
         });
 
         // highlight matches
@@ -1916,10 +1781,22 @@
             "dom": 'fBrtilp',
             "buttons": {
                 "buttons": [
+                    {
+                        "text": 'Reset filters',
+                        "className": "tableHeaderColumnButton resetFilters",
+                        "action": function ( e, dt, node, config ) {
+
+                            $("table#certificateTable thead th input").val("");
+                            siteData.certificateTable.search('')
+                                .columns().search('')
+                                .draw();
+
+                        }
+                    },
                     "columnsToggle",
                     {
                         "extend": "copyHtml5",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1928,7 +1805,7 @@
                     },
                     {
                         "extend": "print",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1937,7 +1814,7 @@
                     },
                     {
                         "extend": "csvHtml5",
-                        "className": "exportCSVButton",
+                        "className": "tableHeaderColumnButton exportFunctions",
                         "exportOptions": {
                             "columns": ":visible",
                             "stripHtml": false,
@@ -1965,16 +1842,6 @@
                         .draw();
                 }
             });
-        });
-
-        // Reset filters button and handlers
-        $("#certificateTable_filter").append("<a id=\"resetCertificateFiltersButton\" class=\"resetFiltersButton\" href=\"javascript:void(0);\">Reset filters</a>")
-
-        $("#resetCertificateFiltersButton").on("click", function () {
-            $("table#certifcateTable thead th input").val("");
-            siteData.certificateTable.search('')
-                .columns().search('')
-                .draw();
         });
 
         // Highlight matches
@@ -2349,9 +2216,8 @@
         Expands all pool matches in the main table when searching
     ******************************************************************************************************************************/
 
-
     function expandPoolMatches(resultset, searchstring) {
-        if (localStorage.autoExpandPools !== "true") {
+        if (localStorage.autoExpandPools !== "true" && searchstring != '') {
             $(resultset).children().children().filter("td:icontains('" + searchstring + "')").each(function () {
                 if (this.classList.contains("PoolCell") || this.classList.contains("relative")) {
                     togglePool(this.id);
