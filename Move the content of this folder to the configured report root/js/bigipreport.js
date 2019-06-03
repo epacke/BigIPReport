@@ -835,6 +835,7 @@
             }
 
             if (vars['mainsection']) {
+
                 var activeSection = vars['mainsection'];
 
                 switch (activeSection) {
@@ -874,8 +875,8 @@
 
                 //If it's provided, populate and search with the global string
                 if (key == "global_search") {
-                    if ($('#allbigips_filter input[type="search"]')) {
-                        $('#allbigips_filter input[type="search"]').val(vars[key]);
+                    if ($('#allbigips_filter input')) {
+                        $('#allbigips_filter input').val(vars[key]);
                         if (siteData.bigipTable) {
                             siteData.bigipTable.search(vars[key]);
                             siteData.bigipTable.draw();
@@ -885,26 +886,9 @@
                     //Validate that the key is a column filter and populate it
                     if ($('input[name="' + key + '"]').length) {
                         $('input[name="' + key + '"]').val(value);
+                        $('input[name="' + key + '"]').trigger("keyup");
                     }
                 }
-            }
-
-            if (siteData.bigipTable) {
-                //Filter the table according to the column filters
-                siteData.bigipTable.columns().every(function () {
-
-                    var that = this;
-
-                    columnvalue = $('input', this.header()).val();
-
-                    if (asInitVals.indexOf(columnvalue) == -1) {
-                        $('input', this.header()).addClass('search_entered').removeClass('search_init');
-                        this.search(columnvalue);
-                        this.draw();
-                        expandPoolMatches($(siteData.bigipTable.table().body()), columnvalue)
-                        highlightAll(siteData.bigipTable);
-                    }
-                });
             }
 
             if (vars['pool']) {
@@ -954,15 +938,15 @@
             <table id="allbigips" class="bigiptable">
                 <thead>
                     <tr>
-                        <th class="loadbalancerHeaderCell"><span style="display: none;">Load Balancer</span><input type="text" class="search" placeholder="Load Balancer" /></th>
-                        <th><span style="display: none;">Name</span><input type="text" class="search" placeholder="Name" /></th>
-                        <th><span style="display: none;">Description</span><input type="text" class="search" placeholder="Description" /></th>
-                        <th><span style="display: none;">IP:Port</span><input type="text" class="search" placeholder="IP:port" /></th>
-                        <th><span style="display: none;">ASM Policies</span><input type="text" class="search" placeholder="ASM Policies" /></th>
-                        <th><span style="display: none;">SSL Profile</span><input type="text" class="search" placeholder="SSL Profile" /></th>
-                        <th><span style="display: none;">Compression Profile</span><input type="text" class="search" placeholder="Compression Profile" /></th>
-                        <th><span style="display: none;">Persistence Profile</span><input type="text" class="search" placeholder="Persistence Profile" /></th>
-                        <th><span style="display: none;">Pool/Members</span><input type="text" class="search" placeholder="Pool/Members" /></th>
+                        <th class="loadbalancerHeaderCell"><span style="display: none;">Load Balancer</span><input type="text" name="loadbalancer" class="search" placeholder="Load Balancer" /></th>
+                        <th><span style="display: none;">Name</span><input type="text" name="name" class="search" placeholder="Name" /></th>
+                        <th><span style="display: none;">Description</span><input type="text" name="description" class="search" placeholder="Description" /></th>
+                        <th><span style="display: none;">IP:Port</span><input type="text" name="ipport" class="search" placeholder="IP:port" /></th>
+                        <th><span style="display: none;">ASM Policies</span><input type="text" name="asmpolicies" class="search" placeholder="ASM Policies" /></th>
+                        <th><span style="display: none;">SSL Profile</span><input type="text" name="sslprofile" class="search" placeholder="SSL Profile" /></th>
+                        <th><span style="display: none;">Compression Profile</span><input name="compressionprofile" type="text" class="search" placeholder="Compression Profile" /></th>
+                        <th><span style="display: none;">Persistence Profile</span><input type="text" name="persistenceprofile" class="search" placeholder="Persistence Profile" /></th>
+                        <th><span style="display: none;">Pool/Members</span><input type="text" name="poolmembers" class="search" placeholder="Pool/Members" /></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1090,12 +1074,11 @@
                         "className": "tableHeaderColumnButton resetFilters",
                         "action": function ( e, dt, node, config ) {
 
-                            $("table#allbigips thead th input[type='search']").val("");
+                            $("table#allbigips thead th input").val("");
 
                             siteData.bigipTable.search('')
                                 .columns().search('')
                                 .draw();
-
                             updateLocationHash();
                         }
                     },
@@ -1154,10 +1137,12 @@
 
         // highlight matches
         siteData.bigipTable.on('draw', function () {
+
+            var body = $(siteData.bigipTable.table().body());
+
             highlightAll(siteData.bigipTable);
-            expandPoolMatches(siteData.bigipTable.table().body(), siteData.bigipTable.search());
+            expandPoolMatches(body, siteData.bigipTable.search());
             hidePools();
-            //toggleColumns(); // Can be removed?
             toggleAdcLinks();
             
             if (siteData.bigipTable.search() != "") {
@@ -1167,6 +1152,22 @@
             setPoolTableCellWidth();
         
         });
+
+        $('div#allbigips_filter.dataTables_filter input').on('keyup input', function () {
+            updateLocationHash();
+        });
+
+        //Update search has on columns input update and expand pool matches
+        siteData.bigipTable.columns().every(function () {
+
+            $('input', this.header()).on('keyup change', function () {
+                updateLocationHash();
+                expandPoolMatches($(siteData.bigipTable.table().body()), $(this).val());
+                highlightAll(siteData.bigipTable);
+            });
+
+        });
+
 
         /*************************************************************************************************************
 
@@ -1320,6 +1321,7 @@
                             siteData.iRuleTable.search('')
                                 .columns().search('')
                                 .draw();
+                            updateLocationHash();
 
                         }
                     },
@@ -2204,13 +2206,15 @@
         var activeSection = $("div#mainholder").attr("data-activesection");
         parameters.push("mainsection=" + activeSection);
 
-        $('.search_entered').each(function () {
-            if (asInitVals.indexOf(this.value) == -1) {
-                parameters.push(this.name + "=" + this.value);
+
+        $('table#allbigips thead tr th input').each(function () {
+            if(this.value !== ''){
+               parameters.push(this.name + "=" + this.value);
             }
         });
 
         var global_search = $('#allbigips_filter label input').val();
+
         if (global_search && global_search != "") {
             parameters.push("global_search" + '=' + global_search);
         }
