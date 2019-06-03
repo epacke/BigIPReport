@@ -1080,7 +1080,10 @@ table#logstable tbody tr td {
 table#logstable tbody tr td.logdate,
 table#logstable tbody tr td.logtime,
 table#logstable tbody tr td.logseverityerror,
-table#logstable tbody tr td.logseverityinfo {
+table#logstable tbody tr td.logseveritywarning,
+table#logstable tbody tr td.logseverityinfo,
+table#logstable tbody tr td.logseveritysuccess,
+table#logstable tbody tr td.logseverityverbose {
     text-align: center;
     white-space: nowrap;
 }
