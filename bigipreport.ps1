@@ -258,10 +258,12 @@ Param($ConfigurationFile = "$PSScriptRoot/bigipreportconfig.xml")
 Set-StrictMode -Version 1.0
 
 #Script version
-$Global:ScriptVersion = "5.2.3"
+$Global:ScriptVersion = "5.2.6"
 
-#Variable for storing handled errors
+#Variables for storing handled error messages
 $Global:LoggedErrors = @()
+$Global:ReportObjects = c@{};
+$Global:ReportObjects.LoggedErrors = @()
 
 #Variable used to calculate the time used to generate the report.
 $StartTime = Get-Date
@@ -308,8 +310,16 @@ Function log {
     $CurrentTime =  $(Get-Date -UFormat "%Y-%m-%d %H:%M:%S ")
     $LogHeader = $CurrentTime + $($LogType.toUpper()) + ' '
 
-    if($LogType -eq "error"){
+    if($LogType -eq "error" -Or $LogType -eq "warning" -Or $LogType -eq "info"){
         $Global:LoggedErrors  += $Message
+        $LogLineDict = @{}
+
+        $LogLineDict["date"] = $(Get-Date -UFormat %Y-%m-%d)
+        $LogLineDict["time"] = $(Get-Date -UFormat %H:%M:%S)
+        $LogLineDict["severity"] = $LogType.toupper()
+        $LogLineDict["message"] = $Message
+
+        $Global:ReportObjects.LoggedErrors += $LogLineDict
     }
 
     if($Global:Bigipreportconfig.Settings.LogSettings.Enabled -eq $true){
@@ -645,7 +655,6 @@ if(-not $SaneConfig){
 #Variables used for storing report data
 $Global:NATdict = c@{}
 
-$Global:ReportObjects = c@{};
 $Global:DeviceGroups = @();
 
 #Build the path to the default document
@@ -1726,7 +1735,7 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
             $F5 = Get-F5.iControl
 
             log error "The script failed to connect to $Device, run the report manually to determine if this was due to a timeout of bad credentials"
-            log errro $F5.LastException.Message
+            log error $F5.LastException.Message
 
             $ObjLoadBalancer = New-Object -TypeName "Loadbalancer"
 
@@ -2244,7 +2253,7 @@ $Global:HTML = [System.Text.StringBuilder]::new()
                 <div class="menuitem" id="datagroupbutton" onclick="Javascript:showDataGroups();"><img id="datagroupsicon" src="images/datagroupicon.png" alt="logs"/> Data Groups</div>
                 <div class="menuitem" id="deviceoverviewbutton" onclick="Javascript:showDeviceOverview();"><img id="devicesoverviewicon" src="images/devicesicon.png" alt="overview"/> Device overview</div>
                 <div class="menuitem" id="certificatebutton" onclick="Javascript:showCertificateDetails();"><img id="certificateicon" src="images/certificates.png" alt="certificates"/> Certificates<span id="certificatenotification"></span></div>
-                <div class="menuitem" id="logsbutton" onclick="Javascript:showReportLogs();"><img id="logsicon" src="images/logsicon.png" alt="logs"/> Logs</div>
+                <div class="menuitem" id="logsbutton" onclick="Javascript:showLogs();"><img id="logsicon" src="images/logsicon.png" alt="logs"/> Logs</div>
                 <div class="menuitem" id="preferencesbutton" onclick="Javascript:showPreferences();"><img id="preferencesicon" src="images/preferences.png" alt="preferences"/> Preferences</div>
                 <div class="menuitem" id="helpbutton" onclick="Javascript:showHelp();"><img id="helpicon" src="images/help.png" alt="help"/> Help</div>
             </div>
@@ -2252,20 +2261,11 @@ $Global:HTML = [System.Text.StringBuilder]::new()
             <div class="mainsection" id="virtualservers" style="display: none;"></div>
             <div class="mainsection" id="pools" style="display: none;"></div>
             <div class="mainsection" id="irules" style="display: none;"></div>
+            <div class="mainsection" id="datagroups" style="display: none;"></div>
             <div class="mainsection" id="deviceoverview" style="display: none;"></div>
             <div class="mainsection" id="certificatedetails" style="display: none;"></div>
-            <div class="mainsection" id="datagroups" style="display: none;"></div>
+            <div class="mainsection" id="logs" style="display: none;"></div>
             <div class="mainsection" id="preferences" style="display: none;"></div>
-
-            <div class="mainsection" id="reportlogs" style="display: none;">
-                <table id="reportlogstable" class="bigiptable">
-                    <thead>
-                        <tr><th>Date</th><th>Time</th><th>Severity</th><th>Log content</th></tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
 
             <div class="mainsection" id="helpcontent" style="display: none;">
                 <h3>Filtering for pool members being down</h3>
@@ -2324,22 +2324,7 @@ if($RealTimeStatusDetected){
 </html>
 "@)
 
-$ErrorLog = @()
-
-ForEach ( $e in $Global:LoggedErrors) {
-    $LogLineDict = @{}
-
-    $LogLineDict["date"] = $(Get-Date -UFormat %Y-%m-%d)
-    $LogLineDict["time"] = $(Get-Date -UFormat %H:%M:%S)
-    $logLineDict["severity"] = "ERROR"
-    $LogLineDict["message"] = $e
-
-    $ErrorLog += $LogLineDict
-}
-
-$ReportObjects.LoggedErrors = $ErrorLog
-
-# Time to write temporary files and then update the report
+# Write temporary files and then update the report
 
 $TemporaryFilesWritten = $false
 

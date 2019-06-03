@@ -7,6 +7,7 @@
     var asInitVals = new Array();
 
     var siteData = {};
+    siteData.loggedErrors = new Array();
 
     /*************************************************************************************************************************************************************************************
 
@@ -160,7 +161,7 @@
                 siteData.NATdict = result;
             }).fail(addJSONLoadingFailure),
             $.getJSON("json/loggederrors.json", function (result) {
-                siteData.loggedErrors = result;
+                siteData.loggedErrors = result.concat(siteData.loggedErrors);
             }).fail(addJSONLoadingFailure)
         ).then(function () {
 
@@ -195,11 +196,6 @@
             *************************************************************************************************************/
 
             initializeStatusVIPs();
-
-            for (var i in siteData.loggedErrors) {
-                var logLine = siteData.loggedErrors[i];
-                log(logLine.message, logLine.severity, logLine.date, logLine.time, false)
-            }
 
             /* highlight selected menu option */
 
@@ -857,8 +853,8 @@
                     case "datagroups":
                         showDataGroups(updatehash);
                         break;
-                    case "reportlogs":
-                        showReportLogs(updatehash);
+                    case "logs":
+                        showLogs(updatehash);
                         break;
                     case "preferences":
                         showPreferences(updatehash);
@@ -1855,6 +1851,127 @@
         siteData.certificateTable.draw();
     }
 
+    function setupLogsTable() {
+
+        if (siteData.logTable) {
+            return;
+        }
+
+        var content = `
+        <table id="logstable" class="bigiptable">
+            <thead>
+                <tr>
+                    <th><span style="display: none;">Date</span><input type="text" class="search" placeholder="Date" /></th>
+                    <th><span style="display: none;">Time</span><input type="text" class="search" placeholder="Time" /></th>
+                    <th><span style="display: none;">Severity</span><input type="text" class="search" placeholder="Severity" /></th>
+                    <th><span style="display: none;">Log Content</span><input type="text" class="search" placeholder="Log Content" /></th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>`;
+
+        $("div#logs").html(content);
+
+        siteData.logTable = $("div#logs table#logstable").DataTable({
+            "autoWidth": false,
+            "deferRender": true,
+            "data": siteData.loggedErrors,
+            "columns": [{
+                "data": "date",
+                "className": "logdate"
+            }, {
+                "data": "time",
+                "className": "logtime"
+            }, {
+                "data": "severity"
+            }, {
+                "data": "message"
+            }],
+            "iDisplayLength": 10,
+            "oLanguage": {
+                "sSearch": "Search all columns:"
+            },
+            "dom": 'fBrtilp',
+            "buttons": {
+                "buttons": [
+                    {
+                        "text": 'Reset filters',
+                        "className": "tableHeaderColumnButton resetFilters",
+                        "action": function ( e, dt, node, config ) {
+
+                            $("table#logstable thead th input").val("");
+                            siteData.logTable.search('')
+                                .columns().search('')
+                                .draw();
+
+                        }
+                    },
+                    "columnsToggle",
+                    {
+                        "extend": "copyHtml5",
+                        "className": "tableHeaderColumnButton exportFunctions",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "export"
+                        }
+                    },
+                    {
+                        "extend": "print",
+                        "className": "tableHeaderColumnButton exportFunctions",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "print"
+                        }
+                    },
+                    {
+                        "extend": "csvHtml5",
+                        "className": "tableHeaderColumnButton exportFunctions",
+                        "exportOptions": {
+                            "columns": ":visible",
+                            "stripHtml": false,
+                            "orthogonal": "export"
+                        },
+                        "customize": customizeCSV
+                    }
+                ]
+            },
+            "createdRow": function(row, data, index) {
+                if (data && data.severity) {
+                    $('td', row).eq(2).addClass( 'logseverity' + data.severity.toLowerCase() );
+                }
+            },
+            "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
+        });
+
+        //Prevents sorting the columns when clicking on the sorting headers
+        $('table#logstable thead th input').on('click', function (e) {
+            e.stopPropagation();
+        });
+
+        // Apply the search
+        siteData.logTable.columns().every( function () {
+            var that = this;
+            $( 'input', this.header() ).on( 'keyup change', function () {
+                if ( that.search() !== this.value ) {
+                    that
+                        .search( this.value )
+                        .draw();
+                }
+            });
+        });
+
+        // Highlight matches
+        siteData.logTable.on('draw', function () {
+            highlightAll(siteData.logTable);
+            toggleAdcLinks();
+        });
+
+        siteData.logTable.draw();
+    }
+
     function hideMainSection() {
         $("div.mainsection").hide();
     }
@@ -2100,15 +2217,16 @@
 
     }
 
-    function showReportLogs(updatehash) {
+    function showLogs(updatehash) {
 
         hideMainSection();
+        setupLogsTable();
         activateMenuButton($("div#logsbutton"));
-        $("div#mainholder").attr("data-activesection", "reportlogs");
+        $("div#mainholder").attr("data-activesection", "logs");
 
         updateLocationHash(updatehash);
 
-        showMainSection("reportlogs");
+        showMainSection("logs");
 
     }
 
@@ -2124,10 +2242,12 @@
     }
 
 
-    function log(message, severity = null, date = null, time = null, prepend = true) {
+    function log(message, severity = null, date = null, time = null) {
 
         if (!date || !time) {
             var now = new Date();
+            const offset = now.getTimezoneOffset();
+            now = new Date(now.getTime() - (offset*60000));
             var dateArr = now.toISOString().split("T")
 
             if (!date) {
@@ -2149,26 +2269,12 @@
                 severityClass = "logseverityinfo";
         }
 
-	if (prepend) {
-		$("table#reportlogstable tbody").prepend(
-		    "<tr><td class=\"reportlogdate\">"
-			+ date + "</td><td class=\"reportlogtime\">"
-			+ time + "</td><td class=\""
-			+ severityClass + "\">"
-			+ severity + "</td><td>"
-			+ message + "</td></tr>"
-		);
-	} else {
-		$("table#reportlogstable tbody").append(
-		    "<tr><td class=\"reportlogdate\">"
-			+ date + "</td><td class=\"reportlogtime\">"
-			+ time + "</td><td class=\""
-			+ severityClass + "\">"
-			+ severity + "</td><td>"
-			+ message + "</td></tr>"
-		);
-	}
-
+        siteData.loggedErrors.push({
+            'date': date,
+            'time': time,
+            'severity': severity,
+            'message': message,
+        });
     }
 
     function toggleAdcLinks() {
