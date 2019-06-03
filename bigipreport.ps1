@@ -286,14 +286,14 @@ if(Test-Path $ConfigurationFile){
     if($?){
         $Outputlevel = $Global:Bigipreportconfig.Settings.Outputlevel
         if($Outputlevel -eq "Verbose"){
-            "Successfully loaded the config file: $ConfigurationFile"
+            log info "Successfully loaded the config file: $ConfigurationFile"
         }
     } else {
-        Write-Error "Can't read the config file: $ConfigurationFile, or config file corrupt. Aborting."
+        log error "Can't read the config file: $ConfigurationFile, or config file corrupt. Aborting."
         Exit
     }
 } else {
-    Write-Error "Failed to load config file $ConfigurationFile from $PSScriptRoot. Aborting."
+    log error "Failed to load config file $ConfigurationFile from $PSScriptRoot. Aborting."
     Exit
 }
 
