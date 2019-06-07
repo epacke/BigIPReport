@@ -260,9 +260,15 @@ Set-StrictMode -Version 1.0
 #Script version
 $Global:ScriptVersion = "5.2.6"
 
+#Enable case sensitive dictionaries
+function c@ {
+    New-Object Collections.Hashtable ([StringComparer]::CurrentCulture)
+}
+
 #Variables for storing handled error messages
 $Global:LoggedErrors = @()
-$Global:ReportObjects = @{};
+$Global:ReportObjects = c@{};
+# report has error warning and info
 $Global:ReportObjects.LoggedErrors = @()
 
 #Variable used to calculate the time used to generate the report.
@@ -270,32 +276,6 @@ $StartTime = Get-Date
 
 #No BOM Encoding in the log file
 $Global:Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
-
-################################################################################################################################################
-#
-#    Load the configration file
-#
-################################################################################################################################################
-
-#Check if the configuration file exists
-if(Test-Path $ConfigurationFile){
-    #Read the file as xml
-    [xml]$Global:Bigipreportconfig = Get-Content $ConfigurationFile
-
-    #Verify that the file was succssfully loaded, otherwise exit
-    if($?){
-        $Outputlevel = $Global:Bigipreportconfig.Settings.Outputlevel
-        if($Outputlevel -eq "Verbose"){
-            Write-Host -ForegroundColor Green "Successfully loaded the config file: $ConfigurationFile"
-        }
-    } else {
-        Write-Host -ForegroundColor Red "Can't read the config file: $ConfigurationFile, or config file corrupt. Aborting."
-        Exit
-    }
-} else {
-    Write-Host -ForegroundColor Red "Failed to load config file $ConfigurationFile from $PSScriptRoot. Aborting."
-    Exit
-}
 
 ################################################################################################################################################
 #
@@ -310,8 +290,13 @@ Function log {
     $CurrentTime =  $(Get-Date -UFormat "%Y-%m-%d %H:%M:%S ")
     $LogHeader = $CurrentTime + $($LogType.toUpper()) + ' '
 
-    if($LogType -eq "error" -Or $LogType -eq "warning" -Or $LogType -eq "info"){
+    # log errors for emailing later
+    if($LogType -eq "error"){
         $Global:LoggedErrors  += $Message
+    }
+
+    # log erros, warnings, and info to loggederrors.json
+    if($LogType -eq "error" -Or $LogType -eq "warning" -Or $LogType -eq "info"){
         $LogLineDict = @{}
 
         $LogLineDict["date"] = $(Get-Date -UFormat %Y-%m-%d)
@@ -322,17 +307,19 @@ Function log {
         $Global:ReportObjects.LoggedErrors += $LogLineDict
     }
 
-    if($Global:Bigipreportconfig.Settings.LogSettings.Enabled -eq $true){
-        $LogFilePath = $Global:Bigipreportconfig.Settings.LogSettings.LogFilePath
-        $LogLevel = $Global:Bigipreportconfig.Settings.LogSettings.LogLevel
+    if(Get-Variable -Name Global:Bigipreportconfig -ErrorAction SilentlyContinue){
+        if($Global:Bigipreportconfig.Settings.LogSettings.Enabled -eq $true){
+            $LogFilePath = $Global:Bigipreportconfig.Settings.LogSettings.LogFilePath
+            $LogLevel = $Global:Bigipreportconfig.Settings.LogSettings.LogLevel
 
-        switch($Logtype) {
-            "error"   { [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) }
-            "warning" { [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) }
-            "info"      { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
-            "success" { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
-            "verbose" { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
-            default   { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
+            switch($Logtype) {
+                "error"   { [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) }
+                "warning" { [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) }
+                "info"      { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
+                "success" { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
+                "verbose" { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
+                default   { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
+            }
         }
     }
 
@@ -349,9 +336,28 @@ Function log {
 }
 
 
-#Enable case sensitive dictionaries
-function c@ {
-    New-Object Collections.Hashtable ([StringComparer]::CurrentCulture)
+################################################################################################################################################
+#
+#    Load the configration file
+#
+################################################################################################################################################
+
+#Check if the configuration file exists
+if(Test-Path $ConfigurationFile){
+    #Read the file as xml
+    [xml]$Global:Bigipreportconfig = Get-Content $ConfigurationFile
+
+    #Verify that the file was succssfully loaded, otherwise exit
+    if($?){
+        $Outputlevel = $Global:Bigipreportconfig.Settings.Outputlevel
+        log success "Successfully loaded the config file: $ConfigurationFile"
+    } else {
+        log error "Can't read the config file: $ConfigurationFile, or config file corrupt. Aborting."
+        Exit
+    }
+} else {
+    log error "Failed to load config file $ConfigurationFile from $PSScriptRoot. Aborting."
+    Exit
 }
 
 ################################################################################################################################################
