@@ -262,7 +262,7 @@ $Global:ScriptVersion = "5.2.6"
 
 #Variables for storing handled error messages
 $Global:LoggedErrors = @()
-$Global:ReportObjects = c@{};
+$Global:ReportObjects = @{};
 $Global:ReportObjects.LoggedErrors = @()
 
 #Variable used to calculate the time used to generate the report.
@@ -286,14 +286,14 @@ if(Test-Path $ConfigurationFile){
     if($?){
         $Outputlevel = $Global:Bigipreportconfig.Settings.Outputlevel
         if($Outputlevel -eq "Verbose"){
-            log info "Successfully loaded the config file: $ConfigurationFile"
+            Write-Host -ForegroundColor Green "Successfully loaded the config file: $ConfigurationFile"
         }
     } else {
-        log error "Can't read the config file: $ConfigurationFile, or config file corrupt. Aborting."
+        Write-Host -ForegroundColor Red "Can't read the config file: $ConfigurationFile, or config file corrupt. Aborting."
         Exit
     }
 } else {
-    log error "Failed to load config file $ConfigurationFile from $PSScriptRoot. Aborting."
+    Write-Host -ForegroundColor Red "Failed to load config file $ConfigurationFile from $PSScriptRoot. Aborting."
     Exit
 }
 
