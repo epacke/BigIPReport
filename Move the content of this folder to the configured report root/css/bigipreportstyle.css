@@ -547,6 +547,10 @@ button.exportFunctions {
     background-image: linear-gradient(to bottom, #33699d, #33699d);
 }
 
+button.exportFunctions:hover {
+    background: #3a79b5 !important;
+}
+
 button.resetFilters {
     background: #f5f5f5;
     background-image: -webkit-linear-gradient(top, #f5f5f5, #c2c2c2);
