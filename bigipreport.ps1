@@ -307,7 +307,7 @@ Function log {
         $Global:ReportObjects.LoggedErrors += $LogLineDict
     }
 
-    if(Get-Variable -Name Global:Bigipreportconfig -ErrorAction SilentlyContinue){
+    if(Get-Variable -Name Bigipreportconfig -Scope Global){
         if($Global:Bigipreportconfig.Settings.LogSettings.Enabled -eq $true){
             $LogFilePath = $Global:Bigipreportconfig.Settings.LogSettings.LogFilePath
             $LogLevel = $Global:Bigipreportconfig.Settings.LogSettings.LogLevel
@@ -1788,7 +1788,7 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
             $RegistrationKeys = $F5.ManagementLicenseAdministration.get_registration_keys();
             $BaseRegistrationKey = $RegistrationKeys[0]
 
-            $Serial = $BaseRegistrationKey.split("-")[-1]
+            $Serial = "Z" + $BaseRegistrationKey.split("-")[-1]
         } else {
             $Serial = $SystemInfo.chassis_serial
         }
