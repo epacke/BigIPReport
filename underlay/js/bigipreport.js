@@ -2399,6 +2399,13 @@ function log(message, severity = null, date = null, time = null) {
         'severity': severity,
         'message': message,
     });
+
+    if (siteData.logTable) {
+        siteData.logTable.destroy();
+        siteData.logTable = false;
+        setupLogsTable();
+    }
+
 }
 
 function toggleAdcLinks() {
