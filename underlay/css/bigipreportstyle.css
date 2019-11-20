@@ -195,6 +195,10 @@ div.realtimestatusdiv {
     cursor: pointer;
 }
 
+div.realtimestatusdiv:hover {
+    background: #f9f9f9;
+}
+
 span.topleftheader {
     font-weight: bold;
     color: #111;
