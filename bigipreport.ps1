@@ -835,7 +835,8 @@ Add-Type @'
         public string fileName;
         public long expirationDate;
         public CertificateDetails subject;
-        public CertificateDetails issuer;
+        public string issuer;
+        public string subjectAlternativeName;
         public string loadbalancer;
     }
 
@@ -977,6 +978,11 @@ function Get-LTMInformation {
     $MajorVersion = $LoadBalancerObjects.LoadBalancer.version.Split(".")[0]
     #$Minorversion = $LoadBalancerObjects.LoadBalancer.version.Split(".")[1]
 
+    $AuthToken = Get-AuthToken -Loadbalancer $LoadBalancerIP
+    $Headers = @{ "X-F5-Auth-Token" = $AuthToken; }
+
+    #Region ASM Policies
+
     $LoadBalancerObjects.ASMPolicies = c@{}
 
     If($MajorVersion -gt 11){
@@ -985,12 +991,7 @@ function Get-LTMInformation {
             $ErrorActionPreference = "SilentlyContinue"
 
             Try {
-                log info "Version 12+ with ASM. Getting REST token for ASM information"
-                $AuthToken = Get-AuthToken -Loadbalancer $LoadBalancerIP
-
                 log verbose "Getting ASM Policy information from $LoadBalancerName"
-
-                $Headers = @{ "X-F5-Auth-Token" = $AuthToken; }
 
                 $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/asm/policies"
                 $Policies = $Response.items
@@ -1026,33 +1027,28 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.Certificates = c@{}
 
-    $Certificates = $F5.ManagementKeyCertificate.get_certificate_list(0)
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert"
+    $Certificates = $Response.items
 
+    $unixEpochStart = new-object DateTime 1970,1,1,0,0,0,([DateTimeKind]::Utc)
     Foreach($Certificate in $Certificates){
         $ObjSubject = New-Object -TypeName "CertificateDetails"
 
-        $ObjSubject.commonName = $Certificate.certificate.subject.common_name
-        $ObjSubject.countryName = $Certificate.certificate.subject.country_name
-        $ObjSubject.stateName = $Certificate.certificate.subject.state_name
-        $ObjSubject.localityName = $Certificate.certificate.subject.locality_name
-        $ObjSubject.organizationName = $Certificate.certificate.subject.organization_name
-        $ObjSubject.divisionName = $Certificate.certificate.subject.division_name
-
-        $ObjIssuer = New-Object -TypeName "CertificateDetails"
-
-        $ObjIssuer.commonName = $Certificate.certificate.issuer.common_name
-        $ObjIssuer.countryName = $Certificate.certificate.issuer.country_name
-        $ObjIssuer.stateName = $Certificate.certificate.issuer.state_name
-        $ObjIssuer.localityName = $Certificate.certificate.issuer.locality_name
-        $ObjIssuer.organizationName = $Certificate.certificate.issuer.organization_name
-        $ObjIssuer.divisionName = $Certificate.certificate.issuer.division_name
+        $ObjSubject.commonName = $Certificate.commonName
+        $ObjSubject.countryName = $Certificate.country
+        $ObjSubject.stateName = $Certificate.state
+        $ObjSubject.localityName = $Certificate.city
+        $ObjSubject.organizationName = $Certificate.organization
+        $ObjSubject.divisionName = $Certificate.ou
 
         $ObjCertificate = New-Object -TypeName "Certificate"
 
-        $ObjCertificate.fileName = $Certificate.file_name
-        $ObjCertificate.expirationDate = $Certificate.certificate.expiration_date
+        $ObjCertificate.fileName = $Certificate.fullPath
+        $expiration = [datetime]::ParseExact($Certificate.apiRawValues.expiration.Replace(" GMT","").Replace("  "," "),"MMM d H:mm:ss yyyy",$null)
+        $ObjCertificate.expirationDate = ($expiration - $unixEpochStart).TotalSeconds
         $ObjCertificate.subject = $ObjSubject
-        $ObjCertificate.issuer = $ObjIssuer
+        $ObjCertificate.subjectAlternativeName = $Certificate.subjectAlternativeName
+        $ObjCertificate.issuer = $Certificate.issuer
         $ObjCertificate.loadbalancer = $LoadBalancerName
 
         $LoadBalancerObjects.Certificates.add($ObjCertificate.fileName, $ObjCertificate)
@@ -1062,17 +1058,17 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.Nodes = c@{}
 
-    [array]$NodeNames = $F5.LocalLBNodeAddressV2.get_list()
-    [array]$NodeAddresses = $F5.LocalLBNodeAddressV2.get_address($NodeNames)
-    [array]$NodeDescriptions = $F5.LocalLBNodeAddressV2.get_description($NodeNames)
+    log verbose "Caching nodes from $LoadBalancerName"
 
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/node"
+    $Nodes = $Response.items
 
-    for($i=0;$i -lt ($NodeAddresses.Count);$i++){
+    Foreach($Node in $Nodes) {
         $ObjTempNode = New-Object Node
 
-        $ObjTempNode.ip = [string]$NodeAddresses[$i]
-        $ObjTempNode.name = [string]$NodeNames[$i]
-        $ObjTempNode.description = [string]$NodeDescriptions[$i]
+        $ObjTempNode.ip = $Node.address
+        $ObjTempNode.name = $Node.name
+        $ObjTempNode.description = $Node.description
         $ObjTempNode.loadbalancer = $LoadBalancerName
 
         if($ObjTempNode.name -eq ""){
@@ -1090,68 +1086,52 @@ function Get-LTMInformation {
 
     log verbose "Caching monitors from $LoadBalancerName"
 
-    [array]$MonitorList = $F5.LocalLBMonitor.get_template_list()
-
     #Save the HTTP monitors separately since they have different properties
-    [array]$HttpMonitors = $MonitorList | Where-Object { $_.template_type -eq "TTYPE_HTTP" -or $_.template_type -eq "TTYPE_HTTPS" }
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/http"
+    [array]$HttpMonitors = $Response.items
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/https"
+    [array]$HttpMonitors += $Response.items
 
-    if($HttpMonitors.Count -gt 0){
-        [array]$HttpmonitorsSendstrings = $F5.LocalLBMonitor.get_template_string_property($HttpMonitors.template_name, $($HttpMonitors | ForEach-Object { 1 }))
-        [array]$HttpmonitorsReceiveStrings = $F5.LocalLBMonitor.get_template_string_property($HttpMonitors.template_name, $($HttpMonitors | ForEach-Object { 3 }))
-        [array]$HttpmonitorsIntervals = $F5.LocalLBMonitor.get_template_integer_property($HttpMonitors.template_name,$($HttpMonitors | ForEach-Object { 1 }))
-        [array]$HttpmonitorsTimeOuts = $F5.LocalLBMonitor.get_template_integer_property($HttpMonitors.template_name,$($HttpMonitors | ForEach-Object { 2 }))
+    Foreach($HttpMonitor in $HttpMonitors){
+        $ObjTempMonitor = New-Object Monitor
+
+        $ObjTempMonitor.name = $HttpMonitor.name
+        $ObjTempMonitor.sendstring = $HttpMonitor.send
+        $ObjTempMonitor.receivestring = $HttpMonitor.recv
+        $ObjTempMonitor.interval = $HttpMonitor.interval
+        $ObjTempMonitor.timeout = $HttpMonitor.timeout
+        $ObjTempMonitor.type = $HttpMonitor.kind.Replace("tm:ltm:monitor:","")
+
+        $ObjTempMonitor.loadbalancer = $LoadBalancerName
+
+        $LoadBalancerObjects.Monitors.add($ObjTempMonitor.name, $ObjTempMonitor)
     }
 
     #Save the monitors which has interval and timeout properties
-    [array]$OtherMonitors = $MonitorList | Where-Object { @("TTYPE_ICMP", "TTYPE_GATEWAY_ICMP", "TTYPE_REAL_SERVER", "TTYPE_SNMP_DCA", "TTYPE_TCP_HALF_OPEN", "TTYPE_TCP", "TTYPE_UDP") -contains $_.template_type }
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/icmp"
+    [array]$OtherMonitors = $Response.items
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/gateway-icmp"
+    [array]$OtherMonitors += $Response.items
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/real-server"
+    [array]$OtherMonitors += $Response.items
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/snmp-dca"
+    [array]$OtherMonitors += $Response.items
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/tcp-half-open"
+    [array]$OtherMonitors += $Response.items
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/tcp"
+    [array]$OtherMonitors += $Response.items
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/udp"
+    [array]$OtherMonitors += $Response.items
 
-    if($OtherMonitors.Count -gt 0){
-        [array]$OtherMonitorsIntervals = $F5.LocalLBMonitor.get_template_integer_property($OtherMonitors.template_name,$($OtherMonitors | ForEach-Object { 1 }))
-        [array]$OtherMonitorsTimeouts = $F5.LocalLBMonitor.get_template_integer_property($OtherMonitors.template_name,$($OtherMonitors | ForEach-Object { 2 }))
-    }
-
-    #Save the rest here
-    $NonCompatibleMonitors = $MonitorList | Where-Object { @("TTYPE_ICMP", "TTYPE_GATEWAY_ICMP", "TTYPE_REAL_SERVER", "TTYPE_SNMP_DCA", "TTYPE_TCP_HALF_OPEN", "TTYPE_TCP", "TTYPE_UDP", "TTYPE_HTTP", "TTYPE_HTTPS") -notcontains $_.template_type }
-
-    For($i = 0;$i -lt $HttpMonitors.Count;$i++){
+    Foreach($OtherMonitor in $OtherMonitors){
         $ObjTempMonitor = New-Object Monitor
 
-        $ObjTempMonitor.name = $HttpMonitors[$i].template_name
-        $ObjTempMonitor.sendstring = $HttpmonitorsSendstrings[$i].value
-        $ObjTempMonitor.receivestring = $HttpmonitorsReceiveStrings[$i].value
-        $ObjTempMonitor.interval = $HttpmonitorsIntervals[$i].value
-        $ObjTempMonitor.timeout = $HttpmonitorsTimeOuts[$i].value
-        $ObjTempMonitor.type = $HttpMonitors[$i].template_type
-
-        $ObjTempMonitor.loadbalancer = $LoadBalancerName
-
-        $LoadBalancerObjects.Monitors.add($ObjTempMonitor.name, $ObjTempMonitor)
-    }
-
-    For($i = 0;$i -lt $OtherMonitors.Count;$i++){
-        $ObjTempMonitor = New-Object Monitor
-
-        $ObjTempMonitor.name = $OtherMonitors[$i].template_name
+        $ObjTempMonitor.name = $OtherMonitor.name
         $ObjTempMonitor.sendstring = "N/A"
         $ObjTempMonitor.receivestring = "N/A"
-        $ObjTempMonitor.interval = $OtherMonitorsIntervals[$i].value
-        $ObjTempMonitor.timeout = $OtherMonitorsTimeouts[$i].value
-        $ObjTempMonitor.type = $OtherMonitors[$i].template_type
-        $ObjTempMonitor.loadbalancer = $LoadBalancerName
-
-        $LoadBalancerObjects.Monitors.add($ObjTempMonitor.name, $ObjTempMonitor)
-    }
-
-    Foreach($Monitor in $NonCompatibleMonitors){
-        $ObjTempMonitor = New-Object Monitor
-
-        $ObjTempMonitor.name = $Monitor.template_name
-        $ObjTempMonitor.sendstring = "N/A"
-        $ObjTempMonitor.receivestring = "N/A"
-        $ObjTempMonitor.interval = "N/A"
-        $ObjTempMonitor.timeout = "N/A"
-        $ObjTempMonitor.type = $Monitor.template_type
-
+        $ObjTempMonitor.interval = $OtherMonitor.interval
+        $ObjTempMonitor.timeout = $OtherMonitor.timeout
+        $ObjTempMonitor.type = $OtherMonitor.kind.Replace("tm:ltm:monitor:","")
         $ObjTempMonitor.loadbalancer = $LoadBalancerName
 
         $LoadBalancerObjects.Monitors.add($ObjTempMonitor.name, $ObjTempMonitor)
@@ -1159,16 +1139,12 @@ function Get-LTMInformation {
 
     #EndRegion
 
-    #Region Cache Data groups
+    #Region Cache Datagroups
 
-    log verbose "Caching data groups from $LoadBalancerName"
-
-    #Region Cache Data group
+    log verbose "Caching datagroups from $LoadBalancerName"
 
     $LoadBalancerObjects.DataGroups = c@{}
 
-    $AuthToken = Get-AuthToken -Loadbalancer $LoadBalancerIP
-    $Headers = @{ "X-F5-Auth-Token" = $AuthToken; }
     $Response = Invoke-WebRequest -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/internal"
 
     $DataGroups = $Response.Content | ConvertFrom-Json
@@ -1217,6 +1193,104 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.Pools = c@{}
 
+<#
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool"
+    [array]$Pools = $Response.items
+
+    Foreach($Pool in $Pools){
+
+        $ObjTempPool = New-Object -Type Pool
+        $ObjTempPool.name = $Pool.fullPath
+        $objTempPool.monitors = $Pool.monitor.split(" and ")
+        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri ("https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") + "/members")
+        [array]$PoolMembers = $Response.items
+
+        #$PoolMemberStats = c@{}
+        #$PoolMemberStatisticsDictionary
+        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri ("https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") + "/members/stats")
+        Foreach($SelfLinks in $Response.entries.calues) {
+            Foreach($PoolMember in $SelfLinks.keys) {
+                #Create a new temporary object of the member class
+                $ObjTempMember = New-Object Member
+
+                $ObjTempMember.Name = $PoolMember.nestedStats.entries.nodeName + ":" + $PoolMember.nestedStats.entries.port
+                $ObjTempMember.ip = $PoolMember.nestedStats.entries.addr.description
+                $ObjTempMember.Port = $PoolMember.$PoolMember.nestedStats.entries.port
+                $ObjTempMember.Availability = $PoolMember.nestedStats.entries.status.availabilityState.description
+                $ObjTempMember.Enabled = $PoolMember.nestedStats.entries.status.enabledState.description
+                $ObjTempMember.Status = $PoolMember.nestedStats.entries.status.statusReason.description
+                $ObjTempMember.Priority = $PoolMember.priorityGroup
+
+                $ObjTempPool.members += $ObjTempMember
+            }
+        }
+
+        Foreach($PoolMember in $PoolMembers) {
+
+            #Populate the object
+            $ObjTempMember.Name = $PoolMember.fullPath
+
+            $ObjTempMember.ip = $PoolMember.address
+            $ObjTempMember.Port = $PoolMember.name.split(":")[1]
+            # FIXME: where do we get Enabled and Status?
+            $ObjTempMember.Availability = $PoolMember.state
+            $ObjTempMember.Enabled = $PoolMember.state
+            $ObjTempMember.Status = $PoolMember.state
+            $ObjTempMember.Priority = $PoolMember.priorityGroup
+
+            Try {
+                $Statistics = $PoolMemberStatisticsDict[$ObjTempMember.Name + ":" + [string]$ObjTempMember.port]
+                $ObjTempMember.currentconnections = $Statistics["currentconnections"]
+                $ObjTempMember.maximumconnections = $Statistics["maximumconnections"]
+            } Catch {
+                log error "Unable to get statistics for member $(objTempMember.Name):$(objTempMember.Port) in pool $($ObjTempPool.name)"
+            }
+
+            #Add the object to a list
+            $ObjTempPool.members += $ObjTempMember
+        }
+
+        $PoolMemberStatisticsDict = Get-PoolMemberStatisticsDictionary -PoolMemberStatsObjArray $PoolMemberStatistics[$i]
+
+        For($x=0;$x -lt $PoolMembers[$i].count;$x++){
+            #Create a new temporary object of the member class
+            $ObjTempMember = New-Object Member
+
+            #Populate the object
+            $ObjTempMember.Name = $PoolMembers[$i][$x].address
+
+            $ObjTempMember.ip = ($LoadBalancerObjects.Nodes[$ObjTempMember.Name]).ip
+            $ObjTempMember.Port = $PoolMembers[$i][$x].port
+            $ObjTempMember.Availability = $PoolMemberstatuses[$i][$x].availability_status
+            $ObjTempMember.Enabled = $PoolMemberstatuses[$i][$x].enabled_status
+            $ObjTempMember.Status = $PoolMemberstatuses[$i][$x].status_description
+            $ObjTempMember.Priority = $PoolMemberpriorities[$i][$x]
+
+            Try {
+                $Statistics = $PoolMemberStatisticsDict[$ObjTempMember.Name + ":" + [string]$ObjTempMember.port]
+                $ObjTempMember.currentconnections = $Statistics["currentconnections"]
+                $ObjTempMember.maximumconnections = $Statistics["maximumconnections"]
+            } Catch {
+                log error "Unable to get statistics for member $(objTempMember.Name):$(objTempMember.Port) in pool $($ObjTempPool.name)"
+            }
+
+            #Add the object to a list
+            $ObjTempPool.members += $ObjTempMember
+        }
+
+        $ObjTempPool.loadbalancingmethod = $Global:LBMethodToString[[string]($PoolLBMethods[$i])]
+        $ObjTempPool.actiononservicedown = $Global:ActionOnPoolFailureToString[[string]($PoolActionOnServiceDown[$i])]
+        $ObjTempPool.allownat = $StateToString[[string]($PoolAllowNAT[$i])]
+        $ObjTempPool.allowsnat = $StateToString[[string]($PoolAllowSNAT[$i])]
+        $ObjTempPool.description = $PoolDescriptions[$i]
+        $ObjTempPool.availability = $PoolStatus[$i].availability_status
+        $ObjTempPool.enabled = $PoolStatus[$i].enabled_status
+        $ObjTempPool.status = $PoolStatus[$i].status_description
+        $ObjTempPool.loadbalancer = $LoadBalancerName
+
+        $LoadBalancerObjects.Pools.add($ObjTempPool.name, $ObjTempPool)
+    }
+#>
     [array]$Poollist = $F5.LocalLBPool.get_list()
     [array]$PoolStatus = $F5.LocalLBPool.get_object_status($PoolList)
     [array]$PoolMonitors = $F5.LocalLBPool.get_monitor_association($PoolList)
