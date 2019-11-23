@@ -281,17 +281,17 @@ function initializeStatusVIPs() {
 }
 
 function PoolMemberStatus(member) {
-    var mStatus = member.enabled.split('_')[2] + ':' + member.availability.split('_')[2];
+    var mStatus = member.enabled + ':' + member.availability;
 
-    if (mStatus == "ENABLED:GREEN") {
+    if (mStatus == "enabled:available") {
         return '<span class="statusicon"><img src="images/green-circle-checkmark.png" alt="Available (Enabled)" title="' + mStatus + ' - Member is able to pass traffic"/></span>';
-    } else if (mStatus == "ENABLED:BLUE") {
+    } else if (mStatus == "enabled:unknown") {
         return '<span class="statusicon"><img src="images/blue-square-questionmark.png" alt="Unknown (Enabled)" title="' + mStatus + ' - Member status unknown"/></span>';
-    } else if (mStatus == "ENABLED:RED" || mStatus == "DISABLED:RED") {
+    } else if (mStatus == "enabled:offline") {
         return '<span class="statusicon"><img src="images/red-circle-cross.png" alt="Offline (Enabled)" title="' + mStatus + ' - Member is unable to pass traffic"/></span>';
-    } else if (mStatus == "DISABLED:GREEN") {
+    } else if (mStatus == "disabled:available") {
         return '<span class="statusicon"><img src="images/black-circle-checkmark.png" alt="Available (Disabled)" title="' + mStatus + ' - Member is available, but disabled"/></span>'
-    } else if (mStatus == "DISABLED:BLUE") {
+    } else if (mStatus == "disabled:offline" || mStatus == "disabled-by-parent:offline") {
         return '<span class="statusicon"><img src="images/black-circle-checkmark.png" alt="Unknown (Disabled)" title="' + mStatus + ' - Member is disabled"/></span>';
     }
     return mStatus;
@@ -301,16 +301,16 @@ function PoolStatus(pool, type) {
     if (!pool) {
         return '';
     }
-    var pStatus = pool.enabled.split('_')[2] + ':' + pool.availability.split('_')[2];
+    var pStatus = pool.enabled + ':' + pool.availability;
 
     if (type == 'display' || type == 'print') {
-        if (pStatus == "ENABLED:GREEN") {
+        if (pStatus == "enabled:available") {
             return '<span class="statusicon"><img src="images/green-circle-checkmark.png" alt="' + pStatus + '" title="' + pStatus + ' - ' + pool.status + '"/></span>';
-        } else if (pStatus == "ENABLED:BLUE") {
+        } else if (pStatus == "enabled:unknown") {
             return '<span class="statusicon"><img src="images/blue-square-questionmark.png" alt="' + pStatus + '" title="' + pStatus + ' - '  + pool.status + '"/></span>';
-        } else if (pStatus == "ENABLED:RED" || pStatus == "DISABLED:RED") {
+        } else if (pStatus == "enabled:offline") {
             return '<span class="statusicon"><img src="images/red-circle-cross.png" alt="' + pStatus + '" title="' + pStatus + ' - '  + pool.status + '"/></span>';
-        } else if (pStatus == "DISABLED:GREEN" || pStatus == "DISABLED:BLUE") {
+        } else if (pStatus == "disabled-by-parent:available" || pStatus == "disabled-by-parent:offline") {
             return '<span class="statusicon"><img src="images/black-circle-checkmark.png" alt="' + pStatus + '" title="' + pStatus + ' - '  + pool.status + '"/></span>'
         }
         return pStatus;
