@@ -1191,9 +1191,17 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.Pools = c@{}
 
-<#
     $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?expandSubcollections=true"
     [array]$Pools = $Response.items
+
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool/stats"
+    $PoolStatsDict = @{}
+    Foreach($PoolStat in $Response.entries.psobject.properties) {
+        $PoolStatsDict.add($PoolStat.Value.psobject.Properties.Value.entries.tmName.description, $PoolStat.Value.psobject.Properties.Value.entries)
+    }
+    #$PoolStatsDict
+
+<#
 
     Foreach($Pool in $Pools){
 
