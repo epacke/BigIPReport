@@ -1394,14 +1394,19 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.iRules = c@{}
 
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/rule"
+    $iRules = $Response.items
+
     $LastPartition = ''
 
-    $F5.LocalLBRule.query_all_rules() | ForEach-Object {
+    Foreach($iRule in $iRules) {
         $ObjiRule = New-Object iRule
 
-        $ObjiRule.name = $_.rule_name
+        $ObjiRule.name = $iRule.fullPath
+        $ObjiRule.definition = $iRule.apiAnonymous
+        $ObjiRule.loadbalancer = $LoadBalancerName
 
-        $Partition = $ObjiRule.name.split("/")[1]
+        $Partition = $iRule.partition
 
         if ($Partition -ne $LastPartition) {
             $SearchPools = $Pools -replace "/$Partition/",""
@@ -1410,16 +1415,11 @@ function Get-LTMInformation {
 
         $LastPartition = $Partition
 
-        $ObjiRule.loadbalancer = $LoadBalancerName
-
-        $Definition = $($_.rule_definition)
-        $ObjiRule.definition = $Definition
-
-        $MatchedPools = @($SearchPools | Where-Object {$Definition -match '(?<![\w-])' + [regex]::Escape($_) + '(?![\w-])'} | Sort-Object -Unique)
+        $MatchedPools = @($SearchPools | Where-Object {$ObjiRule.definition -match '(?<![\w-])' + [regex]::Escape($_) + '(?![\w-])'} | Sort-Object -Unique)
         $MatchedPools = $MatchedPools -replace "^([^/])","/$Partition/`$1"
         $ObjiRule.pools = $MatchedPools
 
-        $MatchedDataGroups = @($SearchDataGroups | Where-Object {$Definition -match '(?<![\w-])' + [regex]::Escape($_) + '(?![\w-])'} | Sort-Object -Unique)
+        $MatchedDataGroups = @($SearchDataGroups | Where-Object {$ObjiRule.definition -match '(?<![\w-])' + [regex]::Escape($_) + '(?![\w-])'} | Sort-Object -Unique)
         $MatchedDataGroups = $MatchedDataGroups -replace "^([^/])","/$Partition/`$1"
         $ObjiRule.datagroups = $MatchedDataGroups
 
