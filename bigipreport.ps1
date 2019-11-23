@@ -962,6 +962,7 @@ if($Global:Bigipreportconfig.Settings.NATFilePath -ne ""){
 #Function used to gather data from the load balancers
 function Get-LTMInformation {
     Param(
+        $Headers,
         $F5,
         $LoadBalancerObjects
     )
@@ -977,9 +978,6 @@ function Get-LTMInformation {
 
     $MajorVersion = $LoadBalancerObjects.LoadBalancer.version.Split(".")[0]
     #$Minorversion = $LoadBalancerObjects.LoadBalancer.version.Split(".")[1]
-
-    $AuthToken = Get-AuthToken -Loadbalancer $LoadBalancerIP
-    $Headers = @{ "X-F5-Auth-Token" = $AuthToken; }
 
     #Region ASM Policies
 
@@ -1194,7 +1192,7 @@ function Get-LTMInformation {
     $LoadBalancerObjects.Pools = c@{}
 
 <#
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?expandSubcollections=true"
     [array]$Pools = $Response.items
 
     Foreach($Pool in $Pools){
@@ -1756,6 +1754,9 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
 
         $ErrorActionPreference = "SilentlyContinue"
 
+        $AuthToken = Get-AuthToken -Loadbalancer $Device
+        $Headers = @{ "X-F5-Auth-Token" = $AuthToken; }
+
         $success = Initialize-F5.iControl -Username $Global:Bigipreportconfig.Settings.Credentials.Username -Password $Global:Bigipreportconfig.Settings.Credentials.Password -HostName $Device
 
         if($?){
@@ -1889,7 +1890,7 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
         #Don't continue if this loabalancer is not active
         If($ObjLoadBalancer.active -or $IsOnlyDevice){
             log verbose "Caching LTM information from $BigIPHostname"
-            Get-LTMInformation -f5 $F5 -LoadBalancer $LoadBalancerObjects
+            Get-LTMInformation -headers $Headers -f5 $F5 -LoadBalancer $LoadBalancerObjects
         } else {
             log info "$BigIPHostname is not active, and won't be indexed"
             Continue
