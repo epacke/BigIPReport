@@ -1432,16 +1432,13 @@ function Get-LTMInformation {
 
     #Region Cache virtual address information
 
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual-address"
+    $VirtualAddresses = $Response.items
+
     $TrafficGroupDict = c@{}
 
-    [array]$VirtualAddressList = $F5.LocalLBVirtualAddressV2.get_list()
-    [array]$VirtualAddressTrafficGroups = $F5.LocalLBVirtualAddressV2.get_traffic_group($VirtualAddressList)
-
-    for($i=0;$i -lt ($VirtualAddressList.Count);$i++){
-        $VirtualAddress = $VirtualAddressList[$i]
-        $TrafficGroup = $VirtualAddressTrafficGroups[$i]
-
-        $TrafficGroupDict.add($VirtualAddress, $TrafficGroup)
+    Foreach($VirtualAddress in $VirtualAddresses){
+        $TrafficGroupDict.add($VirtualAddress.fullPath, $VirtualAddress.trafficGroup)
     }
 
     #EndRegion
