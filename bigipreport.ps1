@@ -1194,168 +1194,46 @@ function Get-LTMInformation {
     $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?expandSubcollections=true"
     [array]$Pools = $Response.items
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool/stats"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool/members/stats"
     $PoolStatsDict = @{}
     Foreach($PoolStat in $Response.entries.psobject.properties) {
         $PoolStatsDict.add($PoolStat.Value.psobject.Properties.Value.entries.tmName.description, $PoolStat.Value.psobject.Properties.Value.entries)
     }
     #$PoolStatsDict
-
-<#
-
     Foreach($Pool in $Pools){
-
         $ObjTempPool = New-Object -Type Pool
+        $ObjTempPool.loadbalancer = $LoadBalancerName
         $ObjTempPool.name = $Pool.fullPath
-        $objTempPool.monitors = $Pool.monitor.split(" and ")
-        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri ("https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") + "/members")
-        [array]$PoolMembers = $Response.items
+        $objTempPool.monitors = $Pool.monitor -split " and "
+        $ObjTempPool.loadbalancingmethod = $Pool.loadBalancingMode
+        $ObjTempPool.actiononservicedown = $Pool.serviceDownAction
+        $ObjTempPool.allownat = $Pool.allowNat
+        $ObjTempPool.allowsnat = $Pool.allowSnat
+        $ObjTempPool.description = $Pool.description
+        $ObjTempPool.availability = $PoolStatsDict[$Pool.fullPath].'status.availabilityState'.description
+        $ObjTempPool.enabled = $PoolStatsDict[$Pool.fullPath].'status.enabledState'.description
+        $ObjTempPool.status = $PoolStatsDict[$Pool.fullPath].'status.enabledReason'.description
 
-        #$PoolMemberStats = c@{}
-        #$PoolMemberStatisticsDictionary
-        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri ("https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") + "/members/stats")
-        Foreach($SelfLinks in $Response.entries.calues) {
-            Foreach($PoolMember in $SelfLinks.keys) {
-                #Create a new temporary object of the member class
-                $ObjTempMember = New-Object Member
-
-                $ObjTempMember.Name = $PoolMember.nestedStats.entries.nodeName + ":" + $PoolMember.nestedStats.entries.port
-                $ObjTempMember.ip = $PoolMember.nestedStats.entries.addr.description
-                $ObjTempMember.Port = $PoolMember.$PoolMember.nestedStats.entries.port
-                $ObjTempMember.Availability = $PoolMember.nestedStats.entries.status.availabilityState.description
-                $ObjTempMember.Enabled = $PoolMember.nestedStats.entries.status.enabledState.description
-                $ObjTempMember.Status = $PoolMember.nestedStats.entries.status.statusReason.description
-                $ObjTempMember.Priority = $PoolMember.priorityGroup
-
-                $ObjTempPool.members += $ObjTempMember
-            }
+        $MemberStatsDict = @{}
+        Foreach($MemberStats in $PoolStatsDict[$Pool.fullPath].psobject.Properties.Value.nestedStats.entries.psobject.Properties) {
+            $MemberStatsDict.add($MemberStats.Value.psobject.Properties.Value.entries.nodeName.description + ":" + $MemberStats.Value.psobject.Properties.Value.entries.port.value, $MemberStats.Value.psobject.Properties.Value.entries)
         }
-
-        Foreach($PoolMember in $PoolMembers) {
-
-            #Populate the object
+        Foreach($PoolMember in $Pool.membersReference.items) {
+            #Create a new temporary object of the member class
+            $ObjTempMember = New-Object Member
             $ObjTempMember.Name = $PoolMember.fullPath
-
             $ObjTempMember.ip = $PoolMember.address
             $ObjTempMember.Port = $PoolMember.name.split(":")[1]
-            # FIXME: where do we get Enabled and Status?
-            $ObjTempMember.Availability = $PoolMember.state
-            $ObjTempMember.Enabled = $PoolMember.state
-            $ObjTempMember.Status = $PoolMember.state
             $ObjTempMember.Priority = $PoolMember.priorityGroup
+            $ObjTempMember.Status = $PoolMember.state
 
-            Try {
-                $Statistics = $PoolMemberStatisticsDict[$ObjTempMember.Name + ":" + [string]$ObjTempMember.port]
-                $ObjTempMember.currentconnections = $Statistics["currentconnections"]
-                $ObjTempMember.maximumconnections = $Statistics["maximumconnections"]
-            } Catch {
-                log error "Unable to get statistics for member $(objTempMember.Name):$(objTempMember.Port) in pool $($ObjTempPool.name)"
-            }
+            $ObjTempMember.Availability = $MemberStatsDict[$PoolMember.fullPath].'status.availabilityState'.description
+            $ObjTempMember.Enabled = $MemberStatsDict[$PoolMember.fullPath].'status.enabledState'.description
+            $ObjTempMember.currentconnections = $MemberStatsDict[$PoolMember.fullPath].'serverside.curConns'.value
+            $ObjTempMember.maximumconnections = $MemberStatsDict[$PoolMember.fullPath].'serverside.maxConns'.value
 
-            #Add the object to a list
             $ObjTempPool.members += $ObjTempMember
         }
-
-        $PoolMemberStatisticsDict = Get-PoolMemberStatisticsDictionary -PoolMemberStatsObjArray $PoolMemberStatistics[$i]
-
-        For($x=0;$x -lt $PoolMembers[$i].count;$x++){
-            #Create a new temporary object of the member class
-            $ObjTempMember = New-Object Member
-
-            #Populate the object
-            $ObjTempMember.Name = $PoolMembers[$i][$x].address
-
-            $ObjTempMember.ip = ($LoadBalancerObjects.Nodes[$ObjTempMember.Name]).ip
-            $ObjTempMember.Port = $PoolMembers[$i][$x].port
-            $ObjTempMember.Availability = $PoolMemberstatuses[$i][$x].availability_status
-            $ObjTempMember.Enabled = $PoolMemberstatuses[$i][$x].enabled_status
-            $ObjTempMember.Status = $PoolMemberstatuses[$i][$x].status_description
-            $ObjTempMember.Priority = $PoolMemberpriorities[$i][$x]
-
-            Try {
-                $Statistics = $PoolMemberStatisticsDict[$ObjTempMember.Name + ":" + [string]$ObjTempMember.port]
-                $ObjTempMember.currentconnections = $Statistics["currentconnections"]
-                $ObjTempMember.maximumconnections = $Statistics["maximumconnections"]
-            } Catch {
-                log error "Unable to get statistics for member $(objTempMember.Name):$(objTempMember.Port) in pool $($ObjTempPool.name)"
-            }
-
-            #Add the object to a list
-            $ObjTempPool.members += $ObjTempMember
-        }
-
-        $ObjTempPool.loadbalancingmethod = $Global:LBMethodToString[[string]($PoolLBMethods[$i])]
-        $ObjTempPool.actiononservicedown = $Global:ActionOnPoolFailureToString[[string]($PoolActionOnServiceDown[$i])]
-        $ObjTempPool.allownat = $StateToString[[string]($PoolAllowNAT[$i])]
-        $ObjTempPool.allowsnat = $StateToString[[string]($PoolAllowSNAT[$i])]
-        $ObjTempPool.description = $PoolDescriptions[$i]
-        $ObjTempPool.availability = $PoolStatus[$i].availability_status
-        $ObjTempPool.enabled = $PoolStatus[$i].enabled_status
-        $ObjTempPool.status = $PoolStatus[$i].status_description
-        $ObjTempPool.loadbalancer = $LoadBalancerName
-
-        $LoadBalancerObjects.Pools.add($ObjTempPool.name, $ObjTempPool)
-    }
-#>
-    [array]$Poollist = $F5.LocalLBPool.get_list()
-    [array]$PoolStatus = $F5.LocalLBPool.get_object_status($PoolList)
-    [array]$PoolMonitors = $F5.LocalLBPool.get_monitor_association($PoolList)
-    [array]$PoolMembers = $F5.LocalLBPool.get_member_v2($PoolList)
-    [array]$PoolMemberstatuses = $F5.LocalLBPool.get_member_object_status($PoolList, $Poolmembers)
-    [array]$PoolMemberpriorities = $F5.LocalLBPool.get_member_priority($Poollist, $PoolMembers)
-    [array]$PoolLBMethods = $F5.LocalLBPool.get_lb_method($PoolList)
-    [array]$PoolActionOnServiceDown = $F5.LocalLBPool.get_action_on_service_down($PoolList)
-    [array]$PoolAllowNAT = $F5.LocalLBPool.get_allow_nat_state($PoolList)
-    [array]$PoolAllowSNAT = $F5.LocalLBPool.get_allow_snat_state($PoolList)
-    [array]$PoolMemberStatistics = $F5.LocalLBPool.get_all_member_statistics($PoolList)
-    [array]$PoolDescriptions = $F5.LocalLBPool.get_description($PoolList)
-
-    for($i=0;$i -lt ($PoolList.Count);$i++){
-        $ObjTempPool = New-Object -Type Pool
-        $ObjTempPool.name = [string]$Poollist[$i]
-
-        $PoolMonitors[$i].monitor_rule.monitor_templates | ForEach-Object {
-            $ObjTempPool.monitors += $_
-        }
-
-        $PoolMemberStatisticsDict = Get-PoolMemberStatisticsDictionary -PoolMemberStatsObjArray $PoolMemberStatistics[$i]
-
-        For($x=0;$x -lt $PoolMembers[$i].count;$x++){
-            #Create a new temporary object of the member class
-            $ObjTempMember = New-Object Member
-
-            #Populate the object
-            $ObjTempMember.Name = $PoolMembers[$i][$x].address
-
-            $ObjTempMember.ip = ($LoadBalancerObjects.Nodes[$ObjTempMember.Name]).ip
-            $ObjTempMember.Port = $PoolMembers[$i][$x].port
-            $ObjTempMember.Availability = $PoolMemberstatuses[$i][$x].availability_status
-            $ObjTempMember.Enabled = $PoolMemberstatuses[$i][$x].enabled_status
-            $ObjTempMember.Status = $PoolMemberstatuses[$i][$x].status_description
-            $ObjTempMember.Priority = $PoolMemberpriorities[$i][$x]
-
-            Try {
-                $Statistics = $PoolMemberStatisticsDict[$ObjTempMember.Name + ":" + [string]$ObjTempMember.port]
-                $ObjTempMember.currentconnections = $Statistics["currentconnections"]
-                $ObjTempMember.maximumconnections = $Statistics["maximumconnections"]
-            } Catch {
-                log error "Unable to get statistics for member $(objTempMember.Name):$(objTempMember.Port) in pool $($ObjTempPool.name)"
-            }
-
-            #Add the object to a list
-            $ObjTempPool.members += $ObjTempMember
-        }
-
-        $ObjTempPool.loadbalancingmethod = $Global:LBMethodToString[[string]($PoolLBMethods[$i])]
-        $ObjTempPool.actiononservicedown = $Global:ActionOnPoolFailureToString[[string]($PoolActionOnServiceDown[$i])]
-        $ObjTempPool.allownat = $StateToString[[string]($PoolAllowNAT[$i])]
-        $ObjTempPool.allowsnat = $StateToString[[string]($PoolAllowSNAT[$i])]
-        $ObjTempPool.description = $PoolDescriptions[$i]
-        $ObjTempPool.availability = $PoolStatus[$i].availability_status
-        $ObjTempPool.enabled = $PoolStatus[$i].enabled_status
-        $ObjTempPool.status = $PoolStatus[$i].status_description
-        $ObjTempPool.loadbalancer = $LoadBalancerName
-
         $LoadBalancerObjects.Pools.add($ObjTempPool.name, $ObjTempPool)
     }
 
