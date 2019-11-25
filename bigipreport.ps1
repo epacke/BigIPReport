@@ -1194,10 +1194,13 @@ function Get-LTMInformation {
     $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?expandSubcollections=true"
     [array]$Pools = $Response.items
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool/members/stats"
     $PoolStatsDict = @{}
-    Foreach($PoolStat in $Response.entries.psobject.properties) {
-        $PoolStatsDict.add($PoolStat.Value.psobject.Properties.Value.entries.tmName.description, $PoolStat.Value.psobject.Properties.Value.entries)
+    If($MajorVersion -ge 12){
+        # need 12+ to support members/stats
+        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool/members/stats"
+        Foreach($PoolStat in $Response.entries.psobject.properties) {
+            $PoolStatsDict.add($PoolStat.Value.psobject.Properties.Value.entries.tmName.description, $PoolStat.Value.psobject.Properties.Value.entries)
+        }
     }
     #$PoolStatsDict
     Foreach($Pool in $Pools){
@@ -1210,6 +1213,12 @@ function Get-LTMInformation {
         $ObjTempPool.allownat = $Pool.allowNat
         $ObjTempPool.allowsnat = $Pool.allowSnat
         $ObjTempPool.description = $Pool.description
+        If($MajorVersion -lt 12){
+            # less than 12 does not support member/stats, so pool stats for each pool
+            $uri = "https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") +"/stats"
+            $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri $uri
+            $PoolStatsDict.add($Pool.fullPath, $Response.entries)
+        }
         $ObjTempPool.availability = $PoolStatsDict[$Pool.fullPath].'status.availabilityState'.description
         $ObjTempPool.enabled = $PoolStatsDict[$Pool.fullPath].'status.enabledState'.description
         $ObjTempPool.status = $PoolStatsDict[$Pool.fullPath].'status.enabledReason'.description
@@ -1777,6 +1786,17 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
         If($ObjLoadBalancer.active -or $IsOnlyDevice){
             log verbose "Caching LTM information from $BigIPHostname"
             Get-LTMInformation -headers $Headers -f5 $F5 -LoadBalancer $LoadBalancerObjects
+            # Record some stats
+            $StatsMsg = "$BigIPHostname Stats:"
+            $StatsMsg += " VS:" + $LoadBalancerObjects.VirtualServers.Keys.Count
+            $StatsMsg += " P:" + $LoadBalancerObjects.Pools.Keys.Count
+            $StatsMsg += " R:" + $LoadBalancerObjects.iRules.Keys.Count
+            $StatsMsg += " DG:" + $LoadBalancerObjects.DataGroups.Keys.Count
+            $StatsMsg += " C:" + $LoadBalancerObjects.Certificates.Keys.Count
+            $StatsMsg += " M:" + $LoadBalancerObjects.Monitors.Keys.Count
+            $StatsMsg += " ASM:" + $LoadBalancerObjects.ASMPolicies.Keys.Count
+            log info $StatsMsg
+
         } else {
             log info "$BigIPHostname is not active, and won't be indexed"
             Continue
