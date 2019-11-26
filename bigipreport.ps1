@@ -1607,13 +1607,10 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
         log verbose "Fetching information about $BigIPHostname"
 
         #Get the version information
-        #$VersionInformation = ($F5.SystemSoftwareManagement.get_all_software_status()) | Where-Object { $_.active -eq "True" }
+        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/version"
 
-        #Get provisioned modules
-        #$Modules = $F5.ManagementProvision.get_provisioned_list()
-
-        $ObjLoadBalancer.version = $VersionInformation.version
-        $ObjLoadBalancer.build = $VersionInformation.build
+        $ObjLoadBalancer.version = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Version.description
+        $ObjLoadBalancer.build = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Build.description
         $ObjLoadBalancer.baseBuild = $VersionInformation.baseBuild
 
         #Get failover status to determine if the load balancer is active
@@ -1622,10 +1619,13 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
         $ObjLoadBalancer.active = $Response.entries.psobject.Properties.value.nestedStats.entries.status.description -eq "ACTIVE"
         $ObjLoadBalancer.color = $Response.entries.psobject.Properties.value.nestedStats.entries.color.description
 
+        #Get provisioned modules
+        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/provision"
+
         $ModuleDict = c@{}
 
-        foreach($Module in $Modules){
-            $ModuleCode = [string]$Module
+        foreach($Module in $Response.items){
+            $ModuleCode = [string]$Module.name
 
             if($ModuleToShort.keys -contains $ModuleCode){
                 $ModuleShortName = $ModuleToShort[$ModuleCode]
