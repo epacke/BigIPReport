@@ -244,14 +244,15 @@
 #                                     when search string is empty
 #                                     Fixed a bug with the certificate reset button not working due to
 #                                     misspelled css selector
-#        5.2.7        2019-06-07      Improving the log section with severities for each entry                      Tim Riker      No
-#        5.2.8        2019-06-13      Added favicon, new icons for pools and devices and making the device          Patrik Jonsson No
+#        5.2.7        2019-06-07      Improving the log section with severities for each entry                      Tim Riker       No
+#        5.2.8        2019-06-13      Added favicon, new icons for pools and devices and making the device          Patrik Jonsson  No
 #                                     serial number correct for virtual editions
-#        5.2.9        2019-06-23      Saving state of column toggles                                                Tim Riker      No
-#        5.3.0        2019-11-15      regex searching, rename "underlay", new settings in xml file! bug fixes       Tim Riker      Yes
+#        5.2.9        2019-06-23      Saving state of column toggles                                                Tim Riker       No
+#        5.3.0        2019-11-15      regex searching, rename "underlay", new settings in xml file! bug fixes       Tim Riker       Yes
 #                                     stats to loggederrors, hide some columns by default, links in datagroups
 #                                     snat pool, new status searching, updated tab/button/input styling
 #                                     monitor column on pool table, new preferences.json
+#        5.3.1        2019-xx-xx      remove pssnapin, now runs on other platforms                                  Tim Riker       No
 #
 #        This script generates a report of the LTM configuration on F5 BigIP's.
 #        It started out as pet project to help co-workers know which traffic goes where but grew.
@@ -266,7 +267,7 @@ Param($ConfigurationFile = "$PSScriptRoot/bigipreportconfig.xml")
 Set-StrictMode -Version 1.0
 
 #Script version
-$Global:ScriptVersion = "5.3.0"
+$Global:ScriptVersion = "5.3.1"
 
 #Enable case sensitive dictionaries
 function c@ {
@@ -2210,7 +2211,7 @@ if(-not (Write-TemporaryFiles)){
 if($TemporaryFilesWritten){
     #Had some problems with the move of the temporary files
     #Adding a sleep to allow the script to finish writing
-    Start-Sleep 10
+    Start-Sleep 5
 
     if(Update-ReportData){
         log success "The report has been successfully been updated"
