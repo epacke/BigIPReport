@@ -974,9 +974,6 @@ function Get-LTMInformation {
     $LoadBalancerName = $LoadBalancerObjects.LoadBalancer.name
     $LoadBalancerIP =  $LoadBalancerObjects.LoadBalancer.ip
 
-    #$F5.SystemSession.set_active_folder("/");
-    #$F5.SystemSession.set_recursive_query_state("STATE_ENABLED");
-
     $MajorVersion = $LoadBalancerObjects.LoadBalancer.version.Split(".")[0]
     #$Minorversion = $LoadBalancerObjects.LoadBalancer.version.Split(".")[1]
 
@@ -1016,10 +1013,6 @@ function Get-LTMInformation {
 
     #EndRegion
 
-    #Region Cache Node and monitor data
-
-    #Cache information about iRules, nodes and monitors
-
     #Region Cache certificate information
 
     log verbose "Caching certificates from $LoadBalancerName"
@@ -1052,6 +1045,8 @@ function Get-LTMInformation {
 
         $LoadBalancerObjects.Certificates.add($ObjCertificate.fileName, $ObjCertificate)
     }
+
+    #EndRegion
 
     #Region Cache node data
 
@@ -1264,7 +1259,7 @@ function Get-LTMInformation {
 
     #EndRegion
 
-    #Region Cache information about irules
+    #Region Cache iRules
 
     log verbose "Caching iRules from $LoadBalancerName"
 
@@ -1357,7 +1352,7 @@ function Get-LTMInformation {
         $ObjTempVirtualServer.compressionprofile = "None";
         $ObjTempVirtualServer.profiletype = "Standard";
 
-        # TODO: this does not work for REST yet
+        # TODO: this does not work for REST yet $F5
         Foreach($Profile in $VirtualServer.profilesReference.items){
             if([string]($Profile.profile_type) -eq "PROFILE_TYPE_HTTP"){
                 $ObjTempVirtualServer.httpprofile = $_.profile_name;
@@ -1502,44 +1497,6 @@ function Get-LTMInformation {
     }
     #EndRegion
 }
-#EndRegion
-
-#Region Function Get-StatisticsDictionary
-
-#Converts an F5 statistics object to a more accessible format
-
-Function Get-PoolMemberStatisticsDictionary {
-    Param($PoolMemberStatsObjArray)
-
-    $StatisticsDictionary = c@{}
-
-    Foreach($PoolMemberStatsObj in $PoolMemberStatsObjArray.Statistics){
-        $Member = $PoolMemberStatsObj.member.address + ":" + $PoolMemberStatsObj.member.port
-
-        $Statistics = c@{}
-
-        $CurrentConnections = Get-Int64 -High $($PoolMemberStatsObj.statistics[4].value.high) -Low $($PoolMemberStatsObj.statistics[4].value.low)
-        $MaximumConnections = Get-Int64 -High $($PoolMemberStatsObj.statistics[5].value.high) -Low $($PoolMemberStatsObj.statistics[5].value.low)
-
-        $Statistics.add("currentconnections", $CurrentConnections)
-        $Statistics.add("maximumconnections", $MaximumConnections)
-
-        $StatisticsDictionary.add($Member, $Statistics)
-    }
-
-    Return $StatisticsDictionary
-}
-
-#EndRegion
-
-#Region Function Get-Int64
-
-Function Get-Int64 {
-    Param($High, $Low)
-
-    Return ([math]::Pow($High, 32) + $Low)
-}
-
 #EndRegion
 
 #Region Function Get-AuthToken
@@ -1715,6 +1672,7 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
             log info "$BigIPHostname is not active, and won't be indexed"
             Continue
         }
+        #EndRegion
     }
     $Global:DeviceGroups += $ObjDeviceGroup
 }
@@ -1887,20 +1845,6 @@ Function Update-ReportData {
     Return $Status
 }
 #EndRegion
-
-#This function converts a list of objects to an array
-function ConvertTo-Array
-{
-    begin {
-        $Output = @();
-    }
-    process {
-        $Output += $_;
-    }
-    end {
-        return ,$Output;
-    }
-}
 
 Function Write-JSONFile {
     Param($Data, $DestinationFile)
