@@ -322,26 +322,26 @@ function PoolStatus(pool, type) {
 function VirtualServerStatus(row) {
     if (!row.enabled || !row.availability)
         return '';
-    var vsStatus = row.enabled.split('_')[2] + ':' + row.availability.split('_')[2];
+    var vsStatus = row.enabled + ':' + row.availability;
 
-    if (vsStatus == "ENABLED:GREEN") {
+    if (vsStatus == "enabled:available") {
         return '<span class="statusicon"><img src="images/green-circle-checkmark.png" alt="Available (Enabled)"' +
             ' title="' + vsStatus + ' - The virtual server is available"/></span>';
-    } else if (vsStatus == "ENABLED:BLUE") {
+    } else if (vsStatus == "enabled:unknown") {
         return '<span class="statusicon"><img src="images/blue-square-questionmark.png" alt="Unknown (Enabled)"' +
             ' title="' + vsStatus + ' - The children pool member(s) either don\'t have service checking enabled,' +
             ' or service check results are not available yet"/></span>';
-    } else if (vsStatus == "ENABLED:RED") {
+    } else if (vsStatus == "enabled:offline") {
         return '<span class="statusicon"><img src="images/red-circle-cross.png" alt="Offline (Enabled)"' +
             ' title="' + vsStatus + ' - The children pool member(s) are down"/></span>';
-    } else if (vsStatus == "DISABLED:GREEN") {
+    } else if (vsStatus == "disabled:available") {
         return '<span class="statusicon"><img src="images/black-circle-cross.png" alt="Available (Disabled)"' +
             ' title="' + vsStatus + ' - The virtual server is disabled"/></span>'
-    } else if (vsStatus == "DISABLED:BLUE") {
+    } else if (vsStatus == "disabled:unknown") {
         return '<span class="statusicon"><img src="images/black-circle-checkmark.png" alt="Unknown (Disabled)"' +
             ' title="' + vsStatus + ' - The children pool member(s) either don\'t have service checking enabled,' +
             ' or service check results are not available yet"/></span>';
-    } else if (vsStatus == "DISABLED:RED") {
+    } else if (vsStatus == "disabled:offline") {
         return '<span class="statusicon"><img src="images/black-circle-cross.png" alt="Offline (Disabled)"' +
             ' title="' + vsStatus + ' - The children pool member(s) are down"/></span>'
     }
