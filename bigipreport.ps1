@@ -1138,54 +1138,6 @@ function Get-LTMInformation {
 
     #EndRegion
 
-    #Region Cache Datagroups
-
-    log verbose "Caching datagroups from $LoadBalancerName"
-
-    $LoadBalancerObjects.DataGroups = c@{}
-
-    $Response = Invoke-WebRequest -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/internal"
-
-    $DataGroups = $Response.Content | ConvertFrom-Json
-
-    Foreach($DataGroup in $DataGroups.Items){
-
-        $ObjTempDataGroup = New-Object -Type DataGroup
-        $ObjTempDataGroup.name = $DataGroup.fullPath
-        $ObjTempDataGroup.type = $DataGroup.type
-        $ObjTempDataGroup.loadbalancer = $LoadBalancerName
-
-        $Dgdata = New-Object System.Collections.Hashtable
-
-        Foreach($Record in $DataGroup.records){
-            $DgData.Add($Record.name, $Record.data)
-        }
-
-        $ObjTempDataGroup.data = $Dgdata
-
-        $LoadBalancerObjects.DataGroups.add($ObjTempDataGroup.name, $ObjTempDataGroup)
-    }
-
-
-    $Response = Invoke-WebRequest -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/external"
-
-    $DataGroups = $Response.Content | ConvertFrom-Json
-
-    Foreach($DataGroup in $DataGroups.Items){
-
-        $ObjTempDataGroup = New-Object -Type DataGroup
-        $ObjTempDataGroup.name = $DataGroup.fullPath
-        $ObjTempDataGroup.type = $DataGroup.type
-        $ObjTempDataGroup.loadbalancer = $LoadBalancerName
-
-        $LoadBalancerObjects.DataGroups.add($ObjTempDataGroup.name, $ObjTempDataGroup)
-    }
-
-    #EndRegion
-
-    #EndRegion
-    #EndRegion
-
     #Region Caching Pool information
 
     log verbose "Caching Pools from $LoadBalancerName"
@@ -1249,23 +1201,37 @@ function Get-LTMInformation {
 
     #EndRegion
 
-    #Region Get Datagroup Pools
-    log verbose "Detecting pools referenced by datagroups on $LoadBalancerName"
+    #Region Cache Datagroups
 
+    log verbose "Caching datagroups from $LoadBalancerName"
+
+    $LoadBalancerObjects.DataGroups = c@{}
     $Pools = $LoadBalancerObjects.Pools.Keys | Sort-Object -Unique
 
-    Foreach($DataGroup in $LoadBalancerObjects.DataGroups.Values){
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/internal"
+    $DataGroups = $Response.items
 
+    Foreach($DataGroup in $DataGroups){
+
+        $ObjTempDataGroup = New-Object -Type DataGroup
+        $ObjTempDataGroup.name = $DataGroup.fullPath
+        $ObjTempDataGroup.type = $DataGroup.type
+        $ObjTempDataGroup.loadbalancer = $LoadBalancerName
+        $Partition = $DataGroup.partition
+
+        $Dgdata = New-Object System.Collections.Hashtable
         $TempPools = @()
 
-        $Partition = $DataGroup.name.split("/")[1]
+        Foreach($Record in $DataGroup.records){
+            $DgData.Add($Record.name, $Record.data)
 
-        Foreach($TempPool in $DataGroup.data.Values) {
+            if (!$Record.data) {continue}
 
-            if (!$TempPool) {continue}
-
-            if(-not $TempPool.contains("/")){
-                $TempPool = "/$Partition/$TempPool"
+            # if data contains pool names, add to .pools and change type to Pools
+            if($record.data.contains("/")){
+                $TempPool = $Record.data
+            } else {
+                $TempPool = "/$Partition/" + $Record.data
             }
 
             if ($Pools -contains $TempPool) {
@@ -1273,11 +1239,29 @@ function Get-LTMInformation {
             }
         }
 
+        $ObjTempDataGroup.data = $Dgdata
+
         if ($TempPools.Count -gt 0) {
-            $LoadBalancerObjects.DataGroups[$DataGroup.name].pools = @($TempPools | Sort-Object -Unique)
-            $LoadBalancerObjects.DataGroups[$DataGroup.name].type = "Pools"
+            $ObjTempDataGroup.pools = @($TempPools | Sort-Object -Unique)
+            $ObjTempDataGroup.type = "Pools"
         }
+
+        $LoadBalancerObjects.DataGroups.add($ObjTempDataGroup.name, $ObjTempDataGroup)
     }
+
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/external"
+    $DataGroups = $Response.items
+
+    Foreach($DataGroup in $DataGroups){
+
+        $ObjTempDataGroup = New-Object -Type DataGroup
+        $ObjTempDataGroup.name = $DataGroup.fullPath
+        $ObjTempDataGroup.type = $DataGroup.type
+        $ObjTempDataGroup.loadbalancer = $LoadBalancerName
+
+        $LoadBalancerObjects.DataGroups.add($ObjTempDataGroup.name, $ObjTempDataGroup)
+    }
+
     #EndRegion
 
     #Region Cache information about irules
@@ -2247,5 +2231,5 @@ if($Global:Bigipreportconfig.Settings.LogSettings.Enabled -eq $true){
 # Done
 
 $DoneMsg = "Done."
-$DoneMsg += " T:" + $($(Get-Date)-$StartTime).totalminutes
+$DoneMsg += " T:" + $($(Get-Date)-$StartTime).TotalSeconds
 log verbose $DoneMsg
