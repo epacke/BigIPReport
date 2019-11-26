@@ -620,6 +620,7 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
     }
 }
 
+<#
 #Initialize iControlSnapin
 if(Get-PSSnapin -Registered | Where-Object { $_.Description.contains("iControl") }){
     $SnapInInfo = Get-PSSnapin -Registered | Where-Object { $_.Description.contains("iControl") }
@@ -642,7 +643,7 @@ if(Get-PSSnapin -Registered | Where-Object { $_.Description.contains("iControl")
     log error "iControl Snapin could not be found, aborting"
     $SaneConfig = $false
 }
-
+#>
 
 if(-not $SaneConfig){
     log verbose "There were errors during the config file sanity check"
@@ -963,7 +964,6 @@ if($Global:Bigipreportconfig.Settings.NATFilePath -ne ""){
 function Get-LTMInformation {
     Param(
         $Headers,
-        $F5,
         $LoadBalancerObjects
     )
 
@@ -973,8 +973,8 @@ function Get-LTMInformation {
     $LoadBalancerName = $LoadBalancerObjects.LoadBalancer.name
     $LoadBalancerIP =  $LoadBalancerObjects.LoadBalancer.ip
 
-    $F5.SystemSession.set_active_folder("/");
-    $F5.SystemSession.set_recursive_query_state("STATE_ENABLED");
+    #$F5.SystemSession.set_active_folder("/");
+    #$F5.SystemSession.set_recursive_query_state("STATE_ENABLED");
 
     $MajorVersion = $LoadBalancerObjects.LoadBalancer.version.Split(".")[0]
     #$Minorversion = $LoadBalancerObjects.LoadBalancer.version.Split(".")[1]
@@ -1611,71 +1611,43 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
         $AuthToken = Get-AuthToken -Loadbalancer $Device
         $Headers = @{ "X-F5-Auth-Token" = $AuthToken; }
 
-        $success = Initialize-F5.iControl -Username $Global:Bigipreportconfig.Settings.Credentials.Username -Password $Global:Bigipreportconfig.Settings.Credentials.Password -HostName $Device
-
-        if($?){
-            log success "iControl session to $Device successfully established"
-            $ErrorActionPreference = "Continue"
-        } Else {
-            $F5 = Get-F5.iControl
-
-            log error "The script failed to connect to $Device, run the report manually to determine if this was due to a timeout of bad credentials"
-            log error $F5.LastException.Message
-
-            $ObjLoadBalancer = New-Object -TypeName "Loadbalancer"
-
-            $ObjLoadBalancer.ip = $Device
-            $ObjLoadBalancer.success = $false
-
-            $ObjStatusVIP = New-Object -TypeName "PoolStatusVip"
-            $ObjLoadBalancer.statusvip = $ObjStatusVIP
-
-            $LoadBalancerObjects = c@{}
-            $LoadBalancerObjects.LoadBalancer = $ObjLoadBalancer
-
-            $Global:ReportObjects.add($ObjLoadBalancer.ip, $LoadBalancerObjects)
-
-            Continue
-        }
-
-        $F5 = Get-F5.iControl
-
         $ObjLoadBalancer = New-Object -TypeName "Loadbalancer"
+        $ObjLoadBalancer.ip = $Device
+        $ObjLoadBalancer.statusvip = New-Object -TypeName "PoolStatusVip"
 
         $ObjLoadBalancer.isonlydevice = $IsOnlyDevice
 
         log verbose "Getting hostname from $Device"
 
-        $BigIPHostname = $F5.SystemInet.get_hostname()
+        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/global-settings"
+        $BigIPHostname = $Response.hostname
 
-        if($?){
-            log verbose "Hostname is $BigipHostname for $Device"
-        } else {
-            log error "Failed to get hostname from $Device"
-        }
+        log verbose "Hostname is $BigipHostname for $Device"
+
+        $ObjLoadBalancer.name = $BigIPHostname
 
         #Get information about ip, name, model and category
-        $SystemInfo = $F5.SystemSystemInfo.get_system_information()
+        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/hardware"
+        $Platform = $Response.entries.'https://localhost/mgmt/tm/sys/hardware/platform'.nestedStats.entries
+        $systemInfo = $Response.entries.'https://localhost/mgmt/tm/sys/hardware/system-info'.nestedStats.entries
 
-        $ObjLoadBalancer.ip = $Device
-        $ObjLoadBalancer.name = $BigIPHostname
-        $ObjLoadBalancer.model = $SystemInfo.platform
-        $ObjLoadBalancer.category = $SystemInfo.product_category
+        $ObjLoadBalancer.model = $SystemInfo.psobject.properties.value.nestedStats.entries.platform.description
+        $ObjLoadBalancer.category = $Platform.psobject.properties.value.nestedStats.entries.marketingName.description
 
         If($ObjLoadBalancer.category -eq "Virtual Edition"){
             # Virtual Editions is using the base registration keys as serial numbers
-            $RegistrationKeys = $F5.ManagementLicenseAdministration.get_registration_keys();
+            #$RegistrationKeys = $F5.ManagementLicenseAdministration.get_registration_keys();
             $BaseRegistrationKey = $RegistrationKeys[0]
 
             $Serial = "Z" + $BaseRegistrationKey.split("-")[-1]
         } else {
-            $Serial = $SystemInfo.chassis_serial
+            $Serial = $SystemInfo.psobject.properties.value.nestedStats.entries.bigipChassisSerialNum.description
         }
 
         $ObjLoadBalancer.serial = $Serial
 
         If($ObjLoadBalancer.category -eq "VCMP"){
-            $HostHardwareInfo = $F5.SystemSystemInfo.get_hardware_information() | Where-Object { $_.name -eq "host_platform" }
+            #$HostHardwareInfo = $F5.SystemSystemInfo.get_hardware_information() | Where-Object { $_.name -eq "host_platform" }
 
             if ($HostHardwareInfo.Count -eq 1){
                 $Platform = $HostHardwareInfo.versions | Where-Object { $_.name -eq "Host platform name" }
@@ -1687,28 +1659,26 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
             }
         }
 
-        $ObjStatusVIP = New-Object -TypeName "PoolStatusVip"
-        $ObjStatusVIP.url = $StatusVIP
-        $ObjLoadBalancer.statusvip = $ObjStatusVIP
+        $ObjLoadBalancer.statusvip.url = $StatusVIP
 
         #Region Cache Load balancer information
         log verbose "Fetching information about $BigIPHostname"
 
         #Get the version information
-        $VersionInformation = ($F5.SystemSoftwareManagement.get_all_software_status()) | Where-Object { $_.active -eq "True" }
+        #$VersionInformation = ($F5.SystemSoftwareManagement.get_all_software_status()) | Where-Object { $_.active -eq "True" }
 
         #Get provisioned modules
-        $Modules = $F5.ManagementProvision.get_provisioned_list()
+        #$Modules = $F5.ManagementProvision.get_provisioned_list()
 
         $ObjLoadBalancer.version = $VersionInformation.version
         $ObjLoadBalancer.build = $VersionInformation.build
         $ObjLoadBalancer.baseBuild = $VersionInformation.baseBuild
 
         #Get failover status to determine if the load balancer is active
-        $FailoverStatus = $F5.ManagementDeviceGroup.get_failover_status()
+        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/cm/failover-status"
 
-        $ObjLoadBalancer.active = $FailoverStatus.status -eq "ACTIVE"
-        $ObjLoadBalancer.color = ($FailoverStatus.color -replace "COLOR_", "").toLower()
+        $ObjLoadBalancer.active = $Response.entries.psobject.Properties.value.nestedStats.entries.status.description -eq "ACTIVE"
+        $ObjLoadBalancer.color = $Response.entries.psobject.Properties.value.nestedStats.entries.color.description
 
         $ModuleDict = c@{}
 
@@ -1744,7 +1714,7 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
         #Don't continue if this loabalancer is not active
         If($ObjLoadBalancer.active -or $IsOnlyDevice){
             log verbose "Caching LTM information from $BigIPHostname"
-            Get-LTMInformation -headers $Headers -f5 $F5 -LoadBalancer $LoadBalancerObjects
+            Get-LTMInformation -headers $Headers -LoadBalancer $LoadBalancerObjects
             # Record some stats
             $StatsMsg = "$BigIPHostname Stats:"
             $StatsMsg += " VS:" + $LoadBalancerObjects.VirtualServers.Keys.Count
