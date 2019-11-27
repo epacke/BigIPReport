@@ -910,8 +910,6 @@ function Get-LTMInformation {
         $LoadBalancerObjects
     )
 
-    #$VersionInfo = $F5.SystemSystemInfo.get_product_information()
-
     #Set some variables to make the code nicer to read
     $LoadBalancerName = $LoadBalancerObjects.LoadBalancer.name
     $LoadBalancerIP =  $LoadBalancerObjects.LoadBalancer.ip
@@ -1322,7 +1320,6 @@ function Get-LTMInformation {
         $ObjTempVirtualServer.compressionprofile = "None";
         $ObjTempVirtualServer.profiletype = "Standard";
 
-        $ObjTempVirtualServer.name
         Foreach($Profile in $VirtualServer.profilesReference.items){
             switch ($ProfileDict[$Profile.fullPath].kind) {
                 "tm:ltm:profile:udp:udpstate"{
