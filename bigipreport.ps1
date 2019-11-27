@@ -621,31 +621,6 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
     }
 }
 
-<#
-#Initialize iControlSnapin
-if(Get-PSSnapin -Registered | Where-Object { $_.Description.contains("iControl") }){
-    $SnapInInfo = Get-PSSnapin -Registered | Where-Object { $_.Description.contains("iControl") }
-
-    if($SnapInInfo.Version.Major -lt 13 -or ($SnapInInfo.Version.Major -eq 13 -and $SnapInInfo.Version.Minor -lt 1) ){
-        log error "The detected iControl SnapIn running on version $([string]$SnapInInfo.Version.Major + "." + [string]$SnapInInfo.Version.Minor) while the one required by this script is 13.1"
-        log error "Follow the steps to upgrade: https://loadbalancing.se/bigip-report/#Upgrading_the_iControl_Snap-in"
-        log error "If you have any issues, please report is in the BigIPReport thread on Devcentral"
-        $SaneConfig = $false
-    } else {
-        Add-PSSnapIn iControlSnapIn
-        if($?){
-            log success "Loaded F5 iControl snapin"
-        } else {
-            log error "Failed to load F5 iControl, aborting"
-            $SaneConfig = $false
-        }
-    }
-} else {
-    log error "iControl Snapin could not be found, aborting"
-    $SaneConfig = $false
-}
-#>
-
 if(-not $SaneConfig){
     log verbose "There were errors during the config file sanity check"
 
