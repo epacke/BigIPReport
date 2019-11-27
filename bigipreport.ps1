@@ -957,6 +957,7 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.Certificates = c@{}
 
+    $Response = ""
     $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert"
     $Certificates = $Response.items
 
