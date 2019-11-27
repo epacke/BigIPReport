@@ -1255,6 +1255,24 @@ function Get-LTMInformation {
 
     #EndRegion
 
+    #Region Cache profiles
+
+    log verbose "Caching profiles from $LoadBalancerName"
+
+    $ProfileLinks = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile"
+
+    $ProfileDict = c@{}
+
+    Foreach($ProfileLink in $ProfileLinks.items.reference.link){
+        $ProfileType = $ProfileLink.split("/")[7].split("?")[0]
+        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile/$ProfileType"
+        Foreach($Profile in $Response.items){
+            $ProfileDict.add($Profile.fullPath, $Profile)
+        }
+    }
+
+    #EndRegion
+
     #Region Cache virtual address information
 
     $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual-address"
@@ -1304,20 +1322,33 @@ function Get-LTMInformation {
         $ObjTempVirtualServer.compressionprofile = "None";
         $ObjTempVirtualServer.profiletype = "Standard";
 
-        # TODO: this does not work for REST yet $F5
+        $ObjTempVirtualServer.name
         Foreach($Profile in $VirtualServer.profilesReference.items){
-            if([string]($Profile.profile_type) -eq "PROFILE_TYPE_HTTP"){
-                $ObjTempVirtualServer.httpprofile = $_.profile_name;
-            } elseif([string]($Profile.profile_type) -eq "PROFILE_TYPE_CLIENT_SSL"){
-                $ObjTempVirtualServer.sslprofileclient += $_.profile_name;
-            } elseif([string]($Profile.profile_type) -eq "PROFILE_TYPE_SERVER_SSL"){
-                $ObjTempVirtualServer.sslprofileserver += $_.profile_name;
-            } elseif([string]($Profile.profile_type) -eq "PROFILE_TYPE_HTTPCOMPRESSION"){
-                $ObjTempVirtualServer.compressionprofile = $_.profile_name;
-            } elseif([string]($Profile.profile_type) -eq "PROFILE_TYPE_FAST_L4"){
-                $ObjTempVirtualServer.profiletype = "Fast L4";
-            } elseif([string]($Profile.profile_type) -eq "PROFILE_TYPE_FAST_HTTP"){
-                $ObjTempVirtualServer.profiletype = "Fast HTTP";
+            switch ($ProfileDict[$Profile.fullPath].kind) {
+                "tm:ltm:profile:udp:udpstate"{
+                    $ObjTempVirtualServer.profiletype = "UDP"
+                }
+                "tm:ltm:profile:http-compression:http-compressionstate" {
+                    $ObjTempVirtualServer.compressionprofile = $Profile.fullPath
+                }
+                "tm:ltm:profile:client-ssl:client-sslstate" {
+                    $ObjTempVirtualServer.sslprofileclient += $Profile.fullPath
+                }
+                "tm:ltm:profile:server-ssl:server-sslstate" {
+                    $ObjTempVirtualServer.sslprofileserver += $Profile.fullPath
+                }
+                "tm:ltm:profile:fastl4:fastl4state" {
+                    $ObjTempVirtualServer.profiletype = "Fast L4"
+                }
+                "tm:ltm:profile:fasthttp:fasthttpstate" {
+                    $ObjTempVirtualServer.profiletype = "Fast HTTP"
+                }
+                "tm:ltm:profile:http:httpstate" {
+                    $ObjTempVirtualServer.httpprofile = $Profile.fullPath
+                }
+                default {
+                    #$ProfileDict[$Profile.fullPath].kind + "|" + $Profile.fullPath
+                }
             }
         }
 
