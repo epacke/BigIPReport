@@ -844,84 +844,26 @@ Add-Type @'
 
 '@
 
-$Global:ModuleToShort = @{
-    "TMOS_MODULE_ASM" = "ASM";
-    "TMOS_MODULE_SAM" = "APM";
-    "TMOS_MODULE_WAM" = "WAM";
-    "TMOS_MODULE_WOM" = "WOM";
-    "TMOS_MODULE_LC" = "LC";
-    "TMOS_MODULE_LTM" = "LTM";
-    "TMOS_MODULE_GTM" = "GTM";
-    "TMOS_MODULE_WOML" = "WOML";
-    "TMOS_MODULE_APML" = "APML";
-    "TMOS_MODULE_EM" = "EM";
-    "TMOS_MODULE_VCMP" = "VCMP";
-    "TMOS_MODULE_UNKNOWN" = "UNKNOWN";
-    "TMOS_MODULE_TMOS" = "TMOS";
-    "TMOS_MODULE_HOST" = "HOST";
-    "TMOS_MODULE_UI" = "UI";
-    "TMOS_MODULE_MONITORS" = "MONITORS";
-    "TMOS_MODULE_AVR" = "AVR";
-    "TMOS_MODULE_ILX" = "ILX";
- }
-
 $Global:ModuleToDescription = @{
-    "ASM" = "The Application Security Module.";
-    "APM" = "The Access Policy Module.";
-    "WAM" = "The Web Accelerator Module.";
-    "WOM" = "The WAN Optimization Module.";
-    "LC" = "The Link Controller Module.";
-    "LTM" = "The Local Traffic Manager Module.";
-    "GTM" = "The Global Traffic Manager Module.";
-    "UNKNOWN" = "The module is unknown (or unsupported by iControl).";
-    "WOML" = "The WAN Optimization Module (Lite).";
-    "APML" = "The Access Policy Module (Lite).";
-    "EM" = "The Enterprise Manager Module.";
-    "VCMP" = "The Virtual Clustered MultiProcessing Module.";
-    "TMOS" = "The Traffic Management part of the Core OS.";
-    "HOST" = "The non-Traffic Management = non-GUI part of the Core OS.";
-    "UI" = "The GUI part of the Core OS.";
-    "MONITORS" = "Represents the external monitors - used for stats only.";
-    "AVR" = "The Application Visualization and Reporting Module";
-    "ILX" = "iRulesLX"
+    "asm" = "The Application Security Module.";
+    "apm" = "The Access Policy Module.";
+    "wam" = "The Web Accelerator Module.";
+    "wom" = "The WAN Optimization Module.";
+    "lc" = "The Link Controller Module.";
+    "ltm" = "The Local Traffic Manager Module.";
+    "gtm" = "The Global Traffic Manager Module.";
+    "unknown" = "The module is unknown (or unsupported by iControl).";
+    "woml" = "The WAN Optimization Module (Lite).";
+    "apml" = "The Access Policy Module (Lite).";
+    "em" = "The Enterprise Manager Module.";
+    "vcmp" = "The Virtual Clustered MultiProcessing Module.";
+    "tmos" = "The Traffic Management part of the Core OS.";
+    "host" = "The non-Traffic Management = non-GUI part of the Core OS.";
+    "ui" = "The GUI part of the Core OS.";
+    "monitors" = "Represents the external monitors - used for stats only.";
+    "avr" = "The Application Visualization and Reporting Module";
+    "ilx" = "iRulesLX"
 }
-
-$Global:LBMethodToString = @{
-    "LB_METHOD_ROUND_ROBIN" = "Round Robin";
-    "LB_METHOD_RATIO_Member" = "Ratio (Member)";
-    "LB_METHOD_LEAST_CONNECTION_Member" = "Least Connections (Member)";
-    "LB_METHOD_OBSERVED_Member" = "Observed (Member)";
-    "LB_METHOD_PREDICTIVE_Member" = "Predictive (Member)";
-    "LB_METHOD_RATIO_NODE_ADDRESS" = "Ratio (Node)";
-    "LB_METHOD_LEAST_CONNECTION_NODE_ADDRESS" = "Least Connection (Node)";
-    "LB_METHOD_FASTEST_NODE_ADDRESS" = "Fastest (node)";
-    "LB_METHOD_OBSERVED_NODE_ADDRESS" = "Observed (node)";
-    "LB_METHOD_PREDICTIVE_NODE_ADDRESS" = "Predictive (node)";
-    "LB_METHOD_DYNAMIC_RATIO" = "Dynamic Ratio";
-    "LB_METHOD_FASTEST_APP_RESPONSE" = "Fastest App Response";
-    "LB_METHOD_LEAST_SESSIONS" = "Least sessions";
-    "LB_METHOD_DYNAMIC_RATIO_Member" = "Dynamic Ratio (Member)";
-    "LB_METHOD_L3_ADDR" = "L3 Address";
-    "LB_METHOD_UNKNOWN" = "Unknown";
-    "LB_METHOD_WEIGHTED_LEAST_CONNECTION_Member" = "Weighted Least Connection (Member)";
-    "LB_METHOD_WEIGHTED_LEAST_CONNECTION_NODE_ADDRESS" = "Weighted Least Connection (Node)";
-    "LB_METHOD_RATIO_SESSION" = "Ratio Sessions";
-    "LB_METHOD_RATIO_LEAST_CONNECTION_Member" = "Ratio Least Connections (Member)";
-    "LB_METHOD_RATIO_LEAST_CONNECTION_NODE_ADDRESS" = "Least Connections (Node)";
-}
-
-$Global:ActionOnPoolFailureToString = @{
-    "SERVICE_DOWN_ACTION_NONE" = "None";
-    "SERVICE_DOWN_ACTION_RESET" = "Reject";
-    "SERVICE_DOWN_ACTION_DROP" = "Drop";
-    "SERVICE_DOWN_ACTION_RESELECT" = "Reselect";
-}
-
-$Global:StateToString = @{
-    "STATE_ENABLED" = "Yes";
-    "STATE_DISABLED" = "No";
-}
-
 
 #Enable of disable the use of TLS1.2
 if($Global:Bigipreportconfig.Settings.UseTLS12 -eq $true){
@@ -981,34 +923,32 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.ASMPolicies = c@{}
 
-    If($MajorVersion -gt 11){
-        #Check if ASM is enabled
-        if($ModuleDict.Keys -contains "ASM"){
-            $ErrorActionPreference = "SilentlyContinue"
+    #Check if ASM is enabled
+    if($LoadBalancerObjects.LoadBalancer.modules["asm"]){
+        $ErrorActionPreference = "SilentlyContinue"
 
-            Try {
-                log verbose "Getting ASM Policy information from $LoadBalancerName"
+        Try {
+            log verbose "Getting ASM Policy information from $LoadBalancerName"
 
-                $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/asm/policies"
-                $Policies = $Response.items
+            $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/asm/policies"
+            $Policies = $Response.items
 
-                Foreach($Policy in $Policies){
-                    $ObjTempPolicy = New-Object -Type ASMPolicy
+            Foreach($Policy in $Policies){
+                $ObjTempPolicy = New-Object -Type ASMPolicy
 
-                    $ObjTempPolicy.name = $Policy.fullPath
-                    $ObjTempPolicy.enforcementMode = $Policy.enforcementMode
-                    $ObjTempPolicy.learningMode = $Policy.learningMode
-                    $ObjTempPolicy.virtualServers = $Policy.virtualServers
-                    $ObjTempPolicy.loadbalancer = $LoadBalancerName
+                $ObjTempPolicy.name = $Policy.fullPath
+                $ObjTempPolicy.enforcementMode = $Policy.enforcementMode
+                $ObjTempPolicy.learningMode = $Policy.learningMode
+                $ObjTempPolicy.virtualServers = $Policy.virtualServers
+                $ObjTempPolicy.loadbalancer = $LoadBalancerName
 
-                    $LoadBalancerObjects.ASMPolicies.add($ObjTempPolicy.name, $ObjTempPolicy)
-                }
-            } Catch {
-                log error "Unable to load ASM policies from $LoadBalancerName."
+                $LoadBalancerObjects.ASMPolicies.add($ObjTempPolicy.name, $ObjTempPolicy)
             }
-
-            $ErrorActionPreference = "Continue"
+        } Catch {
+            log error "Unable to load ASM policies from $LoadBalancerName."
         }
+
+        $ErrorActionPreference = "Continue"
     }
 
     #EndRegion
@@ -1155,14 +1095,16 @@ function Get-LTMInformation {
         $ObjTempPool = New-Object -Type Pool
         $ObjTempPool.loadbalancer = $LoadBalancerName
         $ObjTempPool.name = $Pool.fullPath
-        $objTempPool.monitors = $Pool.monitor -split " and "
+        if($Pool.monitor){
+            $objTempPool.monitors = $Pool.monitor.Trim() -split " and "
+        }
         $ObjTempPool.loadbalancingmethod = $Pool.loadBalancingMode
         $ObjTempPool.actiononservicedown = $Pool.serviceDownAction
         $ObjTempPool.allownat = $Pool.allowNat
         $ObjTempPool.allowsnat = $Pool.allowSnat
         $ObjTempPool.description = $Pool.description
-        If($MajorVersion -lt 12){
-            # less than 12 does not support member/stats, so pool stats for each pool
+        if(!$PoolStatsDict[$Pool.fullPath]){
+            # < v12 does not support member/stats, so pool stats for each pool
             $uri = "https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") +"/stats"
             $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri $uri
             $PoolStatsDict.add($Pool.fullPath, $Response.entries)
@@ -1172,8 +1114,17 @@ function Get-LTMInformation {
         $ObjTempPool.status = $PoolStatsDict[$Pool.fullPath].'status.enabledReason'.description
 
         $MemberStatsDict = c@{}
-        Foreach($MemberStats in $PoolStatsDict[$Pool.fullPath].psobject.Properties.Value.nestedStats.entries.psobject.Properties) {
-            $MemberStatsDict.add($MemberStats.Value.psobject.Properties.Value.entries.nodeName.description + ":" + $MemberStats.Value.psobject.Properties.Value.entries.port.value, $MemberStats.Value.psobject.Properties.Value.entries)
+        if ($PoolStatsDict[$Pool.fullPath].psobject.Properties.Value.nestedStats.entries.psobject.Properties) {
+            $MemberStats = $PoolStatsDict[$Pool.fullPath].psobject.Properties.Value.nestedStats.entries.psobject.Properties
+        } else {
+            $uri = "https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") +"/members/stats"
+            $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri $uri
+            $MemberStats = $Response.entries.psobject.Properties
+            #.psobject.Properties.Value.nestedStats.entries
+        }
+        Foreach($MemberStat in $MemberStats) {
+            #$ObjTempPool.name + "|" + $MemberStat.psobject.Properties.Value.nestedStats.entries.nodeName.description + ":" + $MemberStat.psobject.Properties.Value.nestedStats.entries.port.value
+            $MemberStatsDict.add($MemberStat.psobject.Properties.Value.nestedStats.entries.nodeName.description + ":" + $MemberStat.psobject.Properties.Value.nestedStats.entries.port.value, $MemberStat.psobject.Properties.Value.nestedStats.entries)
         }
         Foreach($PoolMember in $Pool.membersReference.items) {
             #Create a new temporary object of the member class
@@ -1184,6 +1135,7 @@ function Get-LTMInformation {
             $ObjTempMember.Priority = $PoolMember.priorityGroup
             $ObjTempMember.Status = $PoolMember.state
 
+            #$ObjTempPool.name + "|" + $PoolMember.fullPath + "|" + $MemberStatsDict[$PoolMember.fullPath].'status.availabilityState'.description
             $ObjTempMember.Availability = $MemberStatsDict[$PoolMember.fullPath].'status.availabilityState'.description
             $ObjTempMember.Enabled = $MemberStatsDict[$PoolMember.fullPath].'status.enabledState'.description
             $ObjTempMember.currentconnections = $MemberStatsDict[$PoolMember.fullPath].'serverside.curConns'.value
@@ -1440,7 +1392,7 @@ function Get-LTMInformation {
             $ObjTempVirtualServer.vlans = $VirtualServer.vlans
         }
 
-        $VirtualServerSASMPolicies = $LoadBalancerObjects.ASMPolicies.values | Where-Object { $_.virtualServers -contains $VirtualServerName }
+        $VirtualServerSASMPolicies = $LoadBalancerObjects.ASMPolicies.values | Where-Object { $_.virtualServers -contains $ObjTempVirtualServer.name }
 
         if($null -ne $VirtualServerSASMPolicies){
             $ObjTempVirtualServer.asmPolicies = $VirtualServerSASMPolicies.name
@@ -1625,22 +1577,16 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
         $ModuleDict = c@{}
 
         foreach($Module in $Response.items){
-            $ModuleCode = [string]$Module.name
+            if ($Module.level -ne "none") {
+                if($ModuleToDescription.keys -contains $Module.name){
+                    $ModuleDescription = $ModuleToDescription[$Module.name]
+                } else {
+                    $ModuleDescription = "No description found"
+                }
 
-            if($ModuleToShort.keys -contains $ModuleCode){
-                $ModuleShortName = $ModuleToShort[$ModuleCode]
-            } else {
-                $ModuleShortName = $ModuleCode.replace("TMOS_MODULE_", "")
-            }
-
-            if($ModuleToDescription.keys -contains $ModuleShortName){
-                $ModuleDescription = $ModuleToDescription[$ModuleShortName]
-            } else {
-                $ModuleDescription = "No description found"
-            }
-
-            if(!($ModuleDict.keys -contains $ModuleShortName)){
-                $ModuleDict.add($ModuleShortName, $ModuleDescription)
+                if(!($ModuleDict.keys -contains $Module.name)){
+                    $ModuleDict.add($Module.name, $ModuleDescription)
+                }
             }
         }
 
@@ -1954,7 +1900,7 @@ Function Write-TemporaryFiles {
 
 #EndRegion
 
-#Region Check for missing data and if the report contains ASM profiles
+#Region Check for missing data
 if(-not (Test-ReportData)){
     if(-not $Global:Bigipreportconfig.Settings.ErrorReportAnyway -eq $true){
         log error "Missing load balancer data, no report will be written"
@@ -2037,8 +1983,8 @@ $Global:HTML = [System.Text.StringBuilder]::new()
             <div class="mainsection" id="helpcontent" style="display: none;">
                 <h3>Filtering on virtual server, pool or pool member status</h3>
                 <p>This is a bit of a hidden feature. In VirtualServer, Pool, and Member columns you can filter on status.
-                The status options are {ENABLED|DISABLED}:{<span style="color:blue"><b>BLUE</b></span>|<span style="color:green"><b>GREEN</b></span>|<span style="color:red"><b>RED</b></span>}.
-                For example, try searching for: "ENABLED:BLUE", ":RED" or "DISABLED:" as a general or field search.</p>
+                The status options are {enabled|disabled}:{available|offline|unknown}.
+                For example, try searching for: "enabled:available", ":" or "disabled:" as a general or field search.</p>
                 <p>It's not perfect since pools or members with any of these words in the name can also end up as results.</p>
                 <h3>Column filtering</h3>
                 <p>Clicking on any column header allows you to filter data within that column. This has been more clear in the later versions but worth mentioning in case you've missed it.</p>

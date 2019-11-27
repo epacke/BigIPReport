@@ -906,22 +906,22 @@ function setMemberState(statusSpan, memberStatus) {
         case "up":
             icon = "green-circle-checkmark.png";
             title = "Member is ready to accept traffic";
-            status = "ENABLED:GREEN";
+            status = "enabled:available";
             break;
         case "down":
             icon = "red-circle-cross.png";
             title = "Member is marked as down and unable to pass traffic";
-            status = "ENABLED:RED";
+            status = "enabled:offline";
             break;
         case "session_disabled":
             icon = "black-circle-checkmark.png";
             title = "Member is ready to accept traffic, but is disabled";
-            status = "DISABLED:BLUE";
+            status = "disabled:unknown";
             break;
         default:
             icon = "blue-square-questionmark.png";
             title = "Unknown state";
-            status = "ENABLED:BLUE";
+            status = "enabled:unknown";
             break;
     }
 
@@ -3214,7 +3214,6 @@ function showPoolDetails(pool, loadbalancer, layer = 'first') {
                 for (var x in members) {
 
                     let member = members[x];
-                    let memberstatus = translateStatus(member);
 
                     let protocol = matchingmonitors[i].type.replace(/^TTYPE_/, '');
 
