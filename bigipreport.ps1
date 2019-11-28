@@ -933,7 +933,7 @@ function Get-LTMInformation {
     $LoadBalancerObjects.Certificates = c@{}
 
     $Response = ""
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert?`$filter=partition"
     $Certificates = $Response.items
 
     $unixEpochStart = new-object DateTime 1970,1,1,0,0,0,([DateTimeKind]::Utc)
@@ -968,7 +968,7 @@ function Get-LTMInformation {
 
     log verbose "Caching nodes from $LoadBalancerName"
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/node"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/node?`$filter=partition"
     $Nodes = $Response.items
 
     Foreach($Node in $Nodes) {
@@ -995,9 +995,9 @@ function Get-LTMInformation {
     log verbose "Caching monitors from $LoadBalancerName"
 
     #Save the HTTP monitors separately since they have different properties
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/http"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/http?`$filter=partition"
     [array]$HttpMonitors = $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/https"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/https?`$filter=partition"
     [array]$HttpMonitors += $Response.items
 
     Foreach($HttpMonitor in $HttpMonitors){
@@ -1016,19 +1016,19 @@ function Get-LTMInformation {
     }
 
     #Save the monitors which has interval and timeout properties
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/icmp"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/icmp?`$filter=partition"
     [array]$OtherMonitors = $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/gateway-icmp"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/gateway-icmp?`$filter=partition"
     [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/real-server"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/real-server?`$filter=partition"
     [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/snmp-dca"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/snmp-dca?`$filter=partition"
     [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/tcp-half-open"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/tcp-half-open?`$filter=partition"
     [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/tcp"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/tcp?`$filter=partition"
     [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/udp"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/udp?`$filter=partition"
     [array]$OtherMonitors += $Response.items
 
     Foreach($OtherMonitor in $OtherMonitors){
@@ -1053,13 +1053,13 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.Pools = c@{}
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?expandSubcollections=true"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?`$filter=partition&expandSubcollections=true"
     [array]$Pools = $Response.items
 
     $PoolStatsDict = c@{}
     If($MajorVersion -ge 12){
         # need 12+ to support members/stats
-        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool/members/stats"
+        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool/members/stats?`$filter=partition"
         Foreach($PoolStat in $Response.entries.psobject.properties) {
             $PoolStatsDict.add($PoolStat.Value.psobject.Properties.Value.entries.tmName.description, $PoolStat.Value.psobject.Properties.Value.entries)
         }
@@ -1079,7 +1079,7 @@ function Get-LTMInformation {
         $ObjTempPool.description = $Pool.description
         if(!$PoolStatsDict[$Pool.fullPath]){
             # < v12 does not support member/stats, so pool stats for each pool
-            $uri = "https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") +"/stats"
+            $uri = "https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") +"/stats?`$filter=partition"
             $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri $uri
             $PoolStatsDict.add($Pool.fullPath, $Response.entries)
         }
@@ -1088,17 +1088,21 @@ function Get-LTMInformation {
         $ObjTempPool.status = $PoolStatsDict[$Pool.fullPath].'status.enabledReason'.description
 
         $MemberStatsDict = c@{}
-        if ($PoolStatsDict[$Pool.fullPath].psobject.Properties.Value.nestedStats.entries.psobject.Properties) {
+        if ($PoolStatsDict[$Pool.fullPath].psobject.Properties.Value.nestedStats.entries.psobject.Properties.entries) {
             $MemberStats = $PoolStatsDict[$Pool.fullPath].psobject.Properties.Value.nestedStats.entries.psobject.Properties
         } else {
-            $uri = "https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") +"/members/stats"
+            $uri = "https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") +"/members/stats?`$filter=partition"
             $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri $uri
             $MemberStats = $Response.entries.psobject.Properties
             #.psobject.Properties.Value.nestedStats.entries
         }
         Foreach($MemberStat in $MemberStats) {
-            #$ObjTempPool.name + "|" + $MemberStat.psobject.Properties.Value.nestedStats.entries.nodeName.description + ":" + $MemberStat.psobject.Properties.Value.nestedStats.entries.port.value
-            $MemberStatsDict.add($MemberStat.psobject.Properties.Value.nestedStats.entries.nodeName.description + ":" + $MemberStat.psobject.Properties.Value.nestedStats.entries.port.value, $MemberStat.psobject.Properties.Value.nestedStats.entries)
+            if ($MemberStat.psobject.Properties.Value.nestedStats.entries.nodeName.description) {
+                $MemberStatsDict.add($MemberStat.psobject.Properties.Value.nestedStats.entries.nodeName.description + ":" + $MemberStat.psobject.Properties.Value.nestedStats.entries.port.value, $MemberStat.psobject.Properties.Value.nestedStats.entries)
+            } else {
+                #FIXME: How do we get here?
+                #$ObjTempPool.name + "|" + $MemberStat.psobject.Properties.Value.nestedStats.entries.nodeName.description + ":" + $MemberStat.psobject.Properties.Value.nestedStats.entries.port.value
+            }
         }
         Foreach($PoolMember in $Pool.membersReference.items) {
             #Create a new temporary object of the member class
@@ -1129,7 +1133,7 @@ function Get-LTMInformation {
     $LoadBalancerObjects.DataGroups = c@{}
     $Pools = $LoadBalancerObjects.Pools.Keys | Sort-Object -Unique
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/internal"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/internal?`$filter=partition"
     $DataGroups = $Response.items
 
     Foreach($DataGroup in $DataGroups){
@@ -1170,7 +1174,7 @@ function Get-LTMInformation {
         $LoadBalancerObjects.DataGroups.add($ObjTempDataGroup.name, $ObjTempDataGroup)
     }
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/external"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/external?`$filter=partition"
     $DataGroups = $Response.items
 
     Foreach($DataGroup in $DataGroups){
@@ -1193,7 +1197,7 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.iRules = c@{}
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/rule"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/rule?`$filter=partition"
     $iRules = $Response.items
 
     $LastPartition = ''
@@ -1233,13 +1237,13 @@ function Get-LTMInformation {
 
     log verbose "Caching profiles from $LoadBalancerName"
 
-    $ProfileLinks = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile"
+    $ProfileLinks = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile?`$filter=partition"
 
     $ProfileDict = c@{}
 
     Foreach($ProfileLink in $ProfileLinks.items.reference.link){
         $ProfileType = $ProfileLink.split("/")[7].split("?")[0]
-        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile/$ProfileType"
+        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile/${ProfileType}?`$filter=partition"
         Foreach($Profile in $Response.items){
             $ProfileDict.add($Profile.fullPath, $Profile)
         }
@@ -1249,7 +1253,7 @@ function Get-LTMInformation {
 
     #Region Cache virtual address information
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual-address"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual-address?`$filter=partition"
     $VirtualAddresses = $Response.items
 
     $TrafficGroupDict = c@{}
@@ -1266,11 +1270,11 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.VirtualServers = c@{}
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual?expandSubcollections=true"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual?`$filter=partition&expandSubcollections=true"
     [array]$VirtualServers = $Response.items
 
     $VirtualStatsDict = c@{}
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual/stats"
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual/stats?`$filter=partition"
     Foreach($VirtualStat in $Response.entries.psobject.properties) {
         $VirtualStatsDict.add($VirtualStat.Value.nestedStats.entries.tmName.description, $VirtualStat.Value.nestedStats.entries)
     }
