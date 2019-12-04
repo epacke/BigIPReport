@@ -1496,6 +1496,8 @@ Function Get-AuthToken {
 function GetDeviceInfo {
     Param($Device)
 
+    $DevStartTime = Get-Date
+
     log verbose "Getting data from $Device"
 
     $AuthToken = Get-AuthToken -Loadbalancer $Device
@@ -1612,7 +1614,7 @@ function GetDeviceInfo {
         $StatsMsg += " C:" + $LoadBalancerObjects.Certificates.Keys.Count
         $StatsMsg += " M:" + $LoadBalancerObjects.Monitors.Keys.Count
         $StatsMsg += " ASM:" + $LoadBalancerObjects.ASMPolicies.Keys.Count
-        $StatsMsg += " T:" + $($(Get-Date)-$StartTime).TotalSeconds
+        $StatsMsg += " T:" + $($(Get-Date)-$DevStartTime).TotalSeconds
         log success $StatsMsg
     } else {
         log info "$BigIPHostname is not active, and won't be indexed"
