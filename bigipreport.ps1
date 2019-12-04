@@ -365,8 +365,6 @@ Function log {
     }
 }
 
-log verbose "Starting: PSCommandPath=$PSCommandPath; ConfigurationFile = $ConfigurationFile; Location = $Location; PollLoadBalancer = $PollLoadBalancer;"
-
 ################################################################################################################################################
 #
 #    Load the configration file
@@ -390,6 +388,8 @@ if(Test-Path $ConfigurationFile){
     log error "Failed to load config file $ConfigurationFile from $PSScriptRoot. Aborting."
     Exit
 }
+
+log verbose "Starting: PSCommandPath=$PSCommandPath; ConfigurationFile = $ConfigurationFile; Location = $Location; PollLoadBalancer = $PollLoadBalancer;"
 
 ################################################################################################################################################
 #
@@ -1362,7 +1362,7 @@ function Get-LTMInformation {
                     }
                 }
             } else {
-                log error "iRule $tempName not found (zero length?) for ${ObjTempVirtualServer.name} on $LoadBalancerName"
+                log error "iRule $rule not found (zero length?) for ${ObjTempVirtualServer.name} on $LoadBalancerName"
             }
         }
 
@@ -1626,7 +1626,8 @@ function GetDeviceInfo {
         $StatsMsg += " C:" + $LoadBalancerObjects.Certificates.Keys.Count
         $StatsMsg += " M:" + $LoadBalancerObjects.Monitors.Keys.Count
         $StatsMsg += " ASM:" + $LoadBalancerObjects.ASMPolicies.Keys.Count
-        log info $StatsMsg
+        $StatsMsg += " T:" + $($(Get-Date)-$StartTime).TotalSeconds
+        log success $StatsMsg
     } else {
         log info "$BigIPHostname is not active, and won't be indexed"
         return
@@ -1679,7 +1680,7 @@ do {
                 try {
                     $obj=ConvertFrom-Json $line
                     # process contents of $obj, if log, add to global log and echo to screen, else store results.
-                    if($obj.datetime) {
+                    if($obj.datetime -and $obj.severity -and $obj.message) {
                         log $obj.severity ($job.name+':'+$obj.message) $obj.datetime
                     } elseif ($obj.LoadBalancer.ip) {
                         $Global:ReportObjects.add($obj.LoadBalancer.ip, $obj)
@@ -1689,7 +1690,7 @@ do {
                             }
                         }
                     } else {
-                        Write-Host "Temp:$line"
+                        Write-Host "Unmatched:$line"
                     }
                 } catch {
                     # nothing
@@ -1700,8 +1701,7 @@ do {
     Write-Host -NoNewLine "Remaining: $remaining `r"
     Start-Sleep 1
 } until ($remaining -eq 0)
-# wait for jobs to shut down
-$jobs | Wait-Job
+# remove completed jobs
 $jobs | Remove-Job
 
 #Region Function Test-ReportData
@@ -1775,12 +1775,12 @@ Function Update-ReportData {
     [bool]$Status = $true
 
     #Move the temp files to the actual report files
-    Foreach($path in $Global:paths.Keys | Sort-Object) {
-        log verbose "Updating $path file"
-        Move-Item -Force $($Global:paths[$path] + ".tmp") $Global:paths[$path]
+    Foreach($path in $Global:paths.Values | Sort-Object) {
+        log verbose "Updating $path"
+        Move-Item -Force ($path + ".tmp") $path
 
         if(!$?){
-            log error "Failed to update the $path file"
+            log error "Failed to update $path"
             $Status  = $false
         }
     }
@@ -1794,7 +1794,7 @@ Function Write-JSONFile {
 
     $DestinationTempFile = $DestinationFile + ".tmp"
 
-    log verbose "Writing temporary file $DestinationTempFile"
+    log verbose "Writing $DestinationTempFile"
 
     $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 
@@ -1828,7 +1828,7 @@ Function Write-TemporaryFiles {
 
     $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 
-    log verbose "Writing temporary report file to $($Global:paths.report + ".tmp")"
+    log verbose "Writing $($Global:paths.report + ".tmp")"
 
     $HTMLContent = $Global:HTML.ToString();
 
@@ -1902,7 +1902,6 @@ if(-not (Test-ReportData)){
         Exit
     }
     log error "Missing load balancer data, writing report anyway"
-    Send-Errors
 } else {
     log success "No missing loadbalancer data was detected, compiling the report"
 }
@@ -2055,7 +2054,8 @@ $StatsMsg += " DG:" + $Global:Out.Datagroups.Length
 $StatsMsg += " C:" + $Global:Out.Certificates.Length
 $StatsMsg += " M:" + $Global:Out.Monitors.Length
 $StatsMsg += " ASM:" + $Global:Out.ASMPolicies.Length
-log info $StatsMsg
+$StatsMsg += " T:" + $($(Get-Date)-$StartTime).TotalSeconds
+log success $StatsMsg
 
 # Write temporary files and then update the report
 
@@ -2089,6 +2089,7 @@ if($TemporaryFilesWritten){
     log error "The writing of the temporary files failed, no report files will be updated"
 }
 
+# send errors if there where any
 Send-Errors
 
 if($Global:Bigipreportconfig.Settings.LogSettings.Enabled -eq $true){
