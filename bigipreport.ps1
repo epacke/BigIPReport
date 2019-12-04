@@ -274,9 +274,16 @@ if ($null -eq $PollLoadBalancer) {
 } else {
     $ErrorActionPreference = "SilentlyContinue"
 }
+# PowerShell does not inherit PWD in pre v7
 if ($null -ne $Location) {
     Set-Location $Location
+    $PSScriptRoot=$Location
 }
+# PowerShell does not apply PWD to the IO library
+if ([IO.Directory]::GetCurrentDirectory() -ne $PSScriptRoot) {
+    [IO.Directory]::SetCurrentDirectory($PSScriptRoot)
+}
+
 #Script version
 $Global:ScriptVersion = "5.3.1"
 
@@ -379,15 +386,14 @@ if(Test-Path $ConfigurationFile){
         $Outputlevel = $Global:Bigipreportconfig.Settings.Outputlevel
         log success "Successfully loaded the config file: $ConfigurationFile"
     } else {
-        log error "Can't read the config file: $ConfigurationFile, or config file corrupt. Aborting."
+        log error "Can't read the config file: $ConfigurationFile from $PSScriptRoot, or config file corrupt. Aborting."
         Exit
     }
 } else {
     log error "Failed to load config file $ConfigurationFile from $PSScriptRoot. Aborting."
     Exit
 }
-$GetLocation=Get-Location
-log verbose "Starting: PSCommandPath=$PSCommandPath ConfigurationFile=$ConfigurationFile Location=$Location PollLoadBalancer=$PollLoadBalancer PSScriptRoot=$PSScriptRoot GetLocation=$GetLocation"
+log verbose "Starting: PSCommandPath=$PSCommandPath ConfigurationFile=$ConfigurationFile Location=$Location PollLoadBalancer=$PollLoadBalancer PSScriptRoot=$PSScriptRoot"
 
 ################################################################################################################################################
 #
@@ -1774,7 +1780,7 @@ Function Write-JSONFile {
 
     $DestinationTempFile = $DestinationFile + ".tmp"
 
-    log verbose "Writing $DestinationTempFile"
+    log verbose "Writing $DestinationTempFile from $PSScriptRoot"
 
     $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 
