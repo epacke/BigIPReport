@@ -264,24 +264,24 @@
 
 Param($ConfigurationFile = "$PSScriptRoot/bigipreportconfig.xml")
 
-Set-StrictMode -Version 1.0
+Set-StrictMode -Version 2.0
 
 #Script version
 $Global:ScriptVersion = "5.3.1"
 
-#Enable case sensitive dictionaries
+#Variable used to calculate the time used to generate the report.
+$StartTime = Get-Date
+
+#case sensitive dictionaries
 function c@ {
     New-Object Collections.Hashtable ([StringComparer]::CurrentCulture)
 }
 
 #Variables for storing handled error messages
 $Global:LoggedErrors = @()
-$Global:ReportObjects = c@{};
-# report has error warning and info
-$Global:ReportObjects.LoggedErrors = @()
 
-#Variable used to calculate the time used to generate the report.
-$StartTime = Get-Date
+# balancer data for the report
+$Global:ReportObjects = c@{};
 
 #No BOM Encoding in the log file
 $Global:Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
@@ -296,24 +296,18 @@ Function log {
     Param ([string]$LogType, [string]$Message)
 
     #Initiate the log header with date and time
-    $CurrentTime =  $(Get-Date -UFormat "%Y-%m-%d %H:%M:%S ")
-    $LogHeader = $CurrentTime + $($LogType.toUpper()) + ' '
-
-    # log errors for emailing later
-    if($LogType -eq "error"){
-        $Global:LoggedErrors  += $Message
-    }
+    $CurrentTime =  $(Get-Date -UFormat "%Y-%m-%d %H:%M:%S")
+    $LogHeader = $CurrentTime + ' ' + $($LogType.toUpper()) + ' '
 
     # log errors, warnings, info and success to loggederrors.json
     if($LogType -eq "error" -Or $LogType -eq "warning" -Or $LogType -eq "info" -Or $LogType -eq "success"){
         $LogLineDict = @{}
 
-        $LogLineDict["date"] = $(Get-Date -UFormat %Y-%m-%d)
-        $LogLineDict["time"] = $(Get-Date -UFormat %H:%M:%S)
+        $LogLineDict["datetime"] = $CurrentTime
         $LogLineDict["severity"] = $LogType.toupper()
         $LogLineDict["message"] = $Message
 
-        $Global:ReportObjects.LoggedErrors += $LogLineDict
+        $Global:LoggedErrors += $LogLineDict
     }
 
     if(Get-Variable -Name Bigipreportconfig -Scope Global){
@@ -324,7 +318,7 @@ Function log {
             switch($Logtype) {
                 "error"   { [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) }
                 "warning" { [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) }
-                "info"      { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
+                "info"    { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
                 "success" { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
                 "verbose" { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
                 default   { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
@@ -332,15 +326,15 @@ Function log {
         }
     }
 
-    $ConsoleHeader = $CurrentTime
+    $ConsoleHeader = $CurrentTime + ' '
 
     switch($logtype) {
-        "error"        { Write-Host $("$ConsoleHeader$Message") -ForegroundColor "Red" }
-        "warning"    { Write-Host $("$ConsoleHeader$Message") -ForegroundColor "Yellow" }
-        "info"        { if($OutputLevel -eq "Verbose"){ Write-Host $("$ConsoleHeader$Message") -ForegroundColor "Gray" }  }
-        "success"    { if($OutputLevel -eq "Verbose"){ Write-Host $("$ConsoleHeader$Message") -ForegroundColor "Green" } }
-        "verbose"   { if($OutputLevel -eq "Verbose"){ Write-Host "$ConsoleHeader$Message" } }
-        default        { if($OutputLevel -eq "Verbose"){ Write-Host "$ConsoleHeader$Message" } }
+        "error"   { Write-Host $("$ConsoleHeader$Message") -ForegroundColor "Red" }
+        "warning" { Write-Host $("$ConsoleHeader$Message") -ForegroundColor "Yellow" }
+        "info"    { if($OutputLevel -eq "Verbose"){ Write-Host $("$ConsoleHeader$Message") -ForegroundColor "Gray" }  }
+        "success" { if($OutputLevel -eq "Verbose"){ Write-Host $("$ConsoleHeader$Message") -ForegroundColor "Green" } }
+        "verbose" { if($OutputLevel -eq "Verbose"){ Write-Host "$ConsoleHeader$Message" } }
+        default   { if($OutputLevel -eq "Verbose"){ Write-Host "$ConsoleHeader$Message" } }
     }
 }
 
@@ -376,7 +370,7 @@ if(Test-Path $ConfigurationFile){
 ################################################################################################################################################
 Function Send-Errors {
     #Check for errors when executing the script and send them
-    If($Error.Count -gt 0 -or $Global:LoggedErrors -gt 0){
+    If($Error.Count -gt 0 -or ($Global:LoggedErrors | Where-Object {$_.severity -eq "ERROR"}).Count -gt 0){
         log verbose "There were errors while generating the report"
 
         if($Global:Bigipreportconfig.Settings.ErrorReporting.Enabled -eq $true){
@@ -434,17 +428,18 @@ Function Send-Errors {
             if($Global:LoggedErrors.Count -gt 0){
                 $Errorsummary += "<h4>The following handled errors was thrown during the execution</h4>"
 
-                Foreach($HandledError in $Global:LoggedErrors){
-                    $Errorsummary += "<font class=""error"">" + $HandledError + "</font><br>"
+                Foreach($HandledError in $Global:LoggedErrors | Where-Object {$_.severity -eq "ERROR"}){
+                    $Errorsummary += "<font class=""error"">" + $HandledError.message + "</font><br>"
                 }
             }
 
+            # PowerShell $Error
             if($Error.Count -gt 0){
-                $Errorsummary += "<h4>The following exceptions was thrown during script execution</h4>"
+                $Errorsummary += "<h4>The following exceptions were thrown during script execution</h4>"
 
                 $Errorsummary += "<table class=""errortable""><thead><tr class=""headerrow""><th>Category</th><th>Linenumber</th><th>Line</th><th>Stacktrace</th></tr></thead><tbody>"
 
-                Foreach($erroritem in $error){
+                Foreach($erroritem in $Error){
                     $Category = $Erroritem.Categoryinfo.Reason
                     $StackTrace = $Erroritem.ScriptStackTrace
                     $LineNumber = $Erroritem.InvocationInfo.ScriptLineNumber
@@ -468,20 +463,6 @@ Function Send-Errors {
     }
 }
 
-log verbose "Configuring the console window"
-
-#Make the console larger and increase the buffer
-#$PShost = Get-Host
-#$PSWindow = $PShost.ui.rawui
-#$PSWindowSize = $PSWindow.buffersize
-#$PSWindowSize.height = 3000
-#$PSWindowSize.width = [math]::floor([decimal]$PSWindow.MaxPhysicalWindowSize.width)-5
-#$PSwindow.buffersize = $PSWindowSize
-#$PSWindowSize = $PSWindow.windowsize
-#$PSWindowSize.height = 50
-#$PSWindowSize.width = $PSWindowSize.width = [math]::floor([decimal]$PSWindow.MaxPhysicalWindowSize.width)-5
-#$PSWindow.windowsize = $PSWindowSize
-
 ################################################################################################################################################
 #
 #    Pre-execution checks
@@ -492,12 +473,12 @@ log verbose "Pre-execution checks"
 
 $SaneConfig = $true
 
-if($null -eq $Global:Bigipreportconfig.Settings.Credentials.Username -or "" -eq $Global:Bigipreportconfig.Credentials.Username){
+if($null -eq $Global:Bigipreportconfig.Settings.Credentials.Username -or "" -eq $Global:Bigipreportconfig.Settings.Credentials.Username){
     log error "No username configured"
     $SaneConfig = $false
 }
 
-if($null -eq $Global:Bigipreportconfig.Settings.Credentials.Password -or "" -eq $Global:Bigipreportconfig.Credentials.Password){
+if($null -eq $Global:Bigipreportconfig.Settings.Credentials.Password -or "" -eq $Global:Bigipreportconfig.Settings.Credentials.Password){
     log error "No password configured"
     $SaneConfig = $false
 }
@@ -529,16 +510,18 @@ if($null -eq $Global:Bigipreportconfig.Settings.Outputlevel -or "" -eq $Global:B
     $SaneConfig = $false
 }
 
-Foreach($Share in $Global:Bigipreportconfig.Settings.Shares.Share){
-    log verbose "Mounting $($Share.Path)"
+if ($Global:Bigipreportconfig.Settings.SelectNodes("Shares/Share").Count) {
+    Foreach($Share in $Global:Bigipreportconfig.Settings.Shares.Share){
+        log verbose "Mounting $($Share.Path)"
 
-    & net use $($Share.Path) /user:$($Share.Username) $($Share.Password) | Out-Null
+        & net use $($Share.Path) /user:$($Share.Username) $($Share.Password) | Out-Null
 
-    if($?){
-        log success "Share $($Share.Path) was mounted successfully"
-    } else {
-        log error "Share $($Share.Path) could not be mounted"
-        $SaneConfig = $false
+        if($?){
+            log success "Share $($Share.Path) was mounted successfully"
+        } else {
+            log error "Share $($Share.Path) could not be mounted"
+            $SaneConfig = $false
+        }
     }
 }
 
@@ -566,7 +549,7 @@ if($null -eq $Global:Bigipreportconfig.Settings.ReportRoot -or $Global:Bigiprepo
     log error "No report root configured"
     $SaneConfig = $false
 } else {
-    #Make sure the site root ends with / or \
+    #Make sure the report root ends with / or \
     if(-not $Global:bigipreportconfig.Settings.ReportRoot.endswith("/") -and -not $Global:bigipreportconfig.Settings.ReportRoot.endswith("\")){
         $Global:bigipreportconfig.Settings.ReportRoot += "/"
     }
@@ -578,7 +561,7 @@ if($null -eq $Global:Bigipreportconfig.Settings.ReportRoot -or $Global:Bigiprepo
         if(-not (Test-Path $($Global:Bigipreportconfig.Settings.ReportRoot + "json"))){
             log error "The folder $($Global:Bigipreportconfig.Settings.ReportRoot + "json") does not exist in the report root directory. Did you forget to copy the html files from the zip file?"
             $SaneConfig = $false
-        } elseif ( (Get-ChildItem -path $($Global:Bigipreportconfig.Settings.ReportRoot + "json")).count -eq 0){
+        } elseif ( @(Get-ChildItem -path $($Global:Bigipreportconfig.Settings.ReportRoot + "json")).count -eq 0){
             log error "The folder $($Global:Bigipreportconfig.Settings.ReportRoot + "json") does not contain any files. Did you accidentally delete some files?"
             $SaneConfig = $false
         }
@@ -632,7 +615,7 @@ if(-not $SaneConfig){
     log verbose "Exiting"
     Exit
 } else {
-    log success "Pre execution checks was successful"
+    log success "Pre execution checks were successful"
 }
 
 ################################################################################################################################################
@@ -649,22 +632,22 @@ $Global:Preferences = c@{}
 
 $Global:DeviceGroups = @();
 
-#Build the path to the default document
-$Global:reportpath = $Global:bigipreportconfig.Settings.ReportRoot + $Global:bigipreportconfig.Settings.Defaultdocument
 
-#Build the json object paths
-$Global:preferencesjsonpath = $Global:bigipreportconfig.Settings.ReportRoot + "json/preferences.json"
-$Global:poolsjsonpath = $Global:bigipreportconfig.Settings.ReportRoot + "json/pools.json"
-$Global:monitorsjsonpath = $Global:bigipreportconfig.Settings.ReportRoot + "json/monitors.json"
-$Global:virtualserversjsonpath = $Global:bigipreportconfig.Settings.ReportRoot + "json/virtualservers.json"
-$Global:irulesjsonpath = $Global:bigipreportconfig.Settings.ReportRoot + "json/irules.json"
-$Global:datagroupjsonpath = $Global:bigipreportconfig.Settings.ReportRoot + "json/datagroups.json"
-$Global:devicegroupsjsonpath = $Global:bigipreportconfig.Settings.ReportRoot + "json/devicegroups.json"
-$Global:loadbalancersjsonpath = $Global:bigipreportconfig.Settings.ReportRoot + "json/loadbalancers.json"
-$Global:certificatesjsonpath = $Global:bigipreportconfig.Settings.ReportRoot + "json/certificates.json"
-$Global:loggederrorsjsonpath = $Global:bigipreportconfig.Settings.ReportRoot + "json/loggederrors.json"
-$Global:asmpoliciesjsonpath = $Global:bigipreportconfig.Settings.ReportRoot + "json/asmpolicies.json"
-$Global:natjsonpath = $Global:bigipreportconfig.Settings.ReportRoot + "json/nat.json"
+#Build the path to the default document and json files
+$Global:paths = c@{}
+$Global:paths.report = $Global:bigipreportconfig.Settings.ReportRoot + $Global:bigipreportconfig.Settings.Defaultdocument
+$Global:paths.preferences = $Global:bigipreportconfig.Settings.ReportRoot + "json/preferences.json"
+$Global:paths.pools = $Global:bigipreportconfig.Settings.ReportRoot + "json/pools.json"
+$Global:paths.monitors = $Global:bigipreportconfig.Settings.ReportRoot + "json/monitors.json"
+$Global:paths.virtualservers = $Global:bigipreportconfig.Settings.ReportRoot + "json/virtualservers.json"
+$Global:paths.irules = $Global:bigipreportconfig.Settings.ReportRoot + "json/irules.json"
+$Global:paths.datagroups = $Global:bigipreportconfig.Settings.ReportRoot + "json/datagroups.json"
+$Global:paths.devicegroups = $Global:bigipreportconfig.Settings.ReportRoot + "json/devicegroups.json"
+$Global:paths.loadbalancers = $Global:bigipreportconfig.Settings.ReportRoot + "json/loadbalancers.json"
+$Global:paths.certificates = $Global:bigipreportconfig.Settings.ReportRoot + "json/certificates.json"
+$Global:paths.loggederrors = $Global:bigipreportconfig.Settings.ReportRoot + "json/loggederrors.json"
+$Global:paths.asmpolicies = $Global:bigipreportconfig.Settings.ReportRoot + "json/asmpolicies.json"
+$Global:paths.nat = $Global:bigipreportconfig.Settings.ReportRoot + "json/nat.json"
 
 #Create types used to store the data gathered from the load balancers
 Add-Type @'
@@ -1519,10 +1502,14 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
 
         $ObjLoadBalancer.isonlydevice = $IsOnlyDevice
 
-        log verbose "Getting hostname from $Device"
-
+        $BigIPHostname = ""
         $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/global-settings"
         $BigIPHostname = $Response.hostname
+
+        if ($BigIPHostname -eq "") {
+            log error "Could not get hostname from $Device"
+            Continue
+        }
 
         log verbose "Hostname is $BigipHostname for $Device"
 
@@ -1621,7 +1608,6 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
             $StatsMsg += " M:" + $LoadBalancerObjects.Monitors.Keys.Count
             $StatsMsg += " ASM:" + $LoadBalancerObjects.ASMPolicies.Keys.Count
             log info $StatsMsg
-
         } else {
             log info "$BigIPHostname is not active, and won't be indexed"
             Continue
@@ -1703,97 +1689,14 @@ Function Update-ReportData {
     [bool]$Status = $true
 
     #Move the temp files to the actual report files
-    log verbose "Updating the report with the new data"
+    Foreach($path in $Global:paths.Keys | Sort-Object) {
+        log verbose "Updating $path file"
+        Move-Item -Force $($Global:paths[$path] + ".tmp") $Global:paths[$path]
 
-    Move-Item -Force $($Global:reportpath + ".tmp") $Global:reportpath
-
-    if(!$?){
-        log error "Failed to update the report file"
-        $Status  = $false
-    }
-
-    Move-Item -Force $($Global:preferencesjsonpath + ".tmp") $Global:preferencesjsonpath
-
-    if(!$?){
-        log error "Failed to update the preferences json file"
-        $Status  = $false
-    }
-
-    Move-Item -Force $($Global:poolsjsonpath + ".tmp") $Global:poolsjsonpath
-
-    if(!$?){
-        log error "Failed to update the pools json file"
-        $Status  = $false
-    }
-
-    Move-Item -Force $($Global:monitorsjsonpath + ".tmp") $Global:monitorsjsonpath
-
-    if(!$?){
-        log error "Failed to update the monitor json file"
-        $Status  = $false
-    }
-
-    Move-Item -Force $($Global:virtualserversjsonpath + ".tmp") $Global:virtualserversjsonpath
-
-    if(!$?){
-        log error "Failed to update the virtual server json file"
-        $Status  = $false
-    }
-
-    Move-Item -Force $($Global:irulesjsonpath + ".tmp") $Global:irulesjsonpath
-
-    if(!$?){
-        log error "Failed to update the irules json file"
-        $Status  = $false
-    }
-
-    Move-Item -Force $($Global:datagroupjsonpath + ".tmp") $Global:datagroupjsonpath
-
-    if(!$?){
-        log error "Failed to update the data groups json file"
-        $Status  = $false
-    }
-
-    Move-Item -Force $($Global:loadbalancersjsonpath + ".tmp") $Global:loadbalancersjsonpath
-
-    if(!$?){
-        log error "Failed to update the load balancers json file"
-        $Status  = $false
-    }
-
-    Move-Item -Force $($Global:certificatesjsonpath + ".tmp") $Global:certificatesjsonpath
-
-    if(!$?){
-        log error "Failed to update the certificates json file"
-        $Status  = $false
-    }
-
-    Move-Item -Force $($Global:devicegroupsjsonpath + ".tmp") $Global:devicegroupsjsonpath
-
-    if(!$?){
-        log error "Failed to update the device groups json file"
-        $Status  = $false
-    }
-
-    Move-Item -Force $($Global:loggederrorsjsonpath + ".tmp") $Global:loggederrorsjsonpath
-
-    if(!$?){
-        log error "Failed to update the logged errors json file"
-        $Status  = $false
-    }
-
-    Move-Item -Force $($Global:asmpoliciesjsonpath + ".tmp") $Global:asmpoliciesjsonpath
-
-    if(!$?){
-        log error "Failed to update the asm json file"
-        $Status  = $false
-    }
-
-    Move-Item -Force $($Global:natjsonpath + ".tmp") $Global:natjsonpath
-
-    if(!$?){
-        log error "Failed to update the nat json file"
-        $Status  = $false
+        if(!$?){
+            log error "Failed to update the $path file"
+            $Status  = $false
+        }
     }
 
     Return $Status
@@ -1839,7 +1742,7 @@ Function Write-TemporaryFiles {
 
     $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 
-    log verbose "Writing temporary report file to $($Global:reportpath + ".tmp")"
+    log verbose "Writing temporary report file to $($Global:paths.report + ".tmp")"
 
     $HTMLContent = $Global:HTML.ToString();
 
@@ -1848,7 +1751,7 @@ Function Write-TemporaryFiles {
         $HTMLContent = $HTMLContent.Split("`n").Trim() -Join "`n"
     }
 
-    $StreamWriter = New-Object System.IO.StreamWriter($($Global:reportpath + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
+    $StreamWriter = New-Object System.IO.StreamWriter($($Global:paths.report + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
     $StreamWriter.Write($HTMLContent)
 
     if(!$?){
@@ -1858,27 +1761,27 @@ Function Write-TemporaryFiles {
 
     $StreamWriter.dispose()
 
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:preferencesjsonpath -Data $Global:Preferences
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:poolsjsonpath -Data @( $Global:ReportObjects.Values.Pools.Values | Sort-Object loadbalancer, name )
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:monitorsjsonpath -Data @( $Global:ReportObjects.Values.Monitors.Values | Sort-Object loadbalancer, name )
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:loadbalancersjsonpath -Data @( $Global:ReportObjects.Values.LoadBalancer | Sort-Object name )
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:virtualserversjsonpath -Data @( $Global:ReportObjects.Values.VirtualServers.Values | Sort-Object loadbalancer,name )
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:certificatesjsonpath -Data @( $Global:ReportObjects.Values.Certificates.Values | Sort-Object loadbalancer, fileName )
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:devicegroupsjsonpath -Data @( $Global:DeviceGroups | Sort-Object name )
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:loggederrorsjsonpath -Data @( $Global:ReportObjects.LoggedErrors )
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.preferences -Data $Global:Preferences
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.devicegroups -Data @( $Global:DeviceGroups | Sort-Object name )
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.loadbalancers -Data @( $Global:ReportObjects.Values.LoadBalancer | Sort-Object name )
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.pools -Data @( $Global:ReportObjects.Values.Pools.Values | Sort-Object loadbalancer, name )
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.monitors -Data @( $Global:ReportObjects.Values.Monitors.Values | Sort-Object loadbalancer, name )
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.virtualservers -Data @( $Global:ReportObjects.Values.VirtualServers.Values | Sort-Object loadbalancer,name )
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.certificates -Data @( $Global:ReportObjects.Values.Certificates.Values | Sort-Object loadbalancer, fileName )
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.loggederrors -Data @( $Global:LoggedErrors )
     If ($Global:ReportObjects.Values.ASMPolicies.Keys.Count -gt 0) {
-        $WriteStatuses += Write-JSONFile -DestinationFile $Global:asmpoliciesjsonpath -Data @( $Global:ReportObjects.Values.ASMPolicies.Values | Sort-Object loadbalancer, name )
+        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.asmpolicies -Data @( $Global:ReportObjects.Values.ASMPolicies.Values | Sort-Object loadbalancer, name )
     } else {
-        $WriteStatuses += Write-JSONFile -DestinationFile $Global:asmpoliciesjsonpath -Data @()
+        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.asmpolicies -Data @()
     }
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:natjsonpath -Data $Global:NATdict
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.nat -Data $Global:NATdict
 
     if($Global:Bigipreportconfig.Settings.iRules.Enabled -eq $true){
-        $WriteStatuses += Write-JSONFile -DestinationFile $Global:irulesjsonpath -Data @($Global:ReportObjects.Values.iRules.Values | Sort-Object loadbalancer, name )
+        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.irules -Data @($Global:ReportObjects.Values.iRules.Values | Sort-Object loadbalancer, name )
     } else {
-        log verbose "iRule links disabled in config. Writing empty json object to $($Global:irulesjsonpath + ".tmp")"
+        log verbose "iRule links disabled in config. Writing empty json object to $($Global:irules + ".tmp")"
 
-        $StreamWriter = New-Object System.IO.StreamWriter($($Global:irulesjsonpath + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
+        $StreamWriter = New-Object System.IO.StreamWriter($($Global:irules + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
 
         #Since rules has been disabled, only write those defined
         $RuleScope = $Global:ReportObjects.Values.iRules.Values | Where-Object { $_.name -in $Bigipreportconfig.Settings.iRules.iRule.iRuleName -and $_.loadbalancer -in $Bigipreportconfig.Settings.iRules.iRule.loadbalancer }
@@ -1898,9 +1801,9 @@ Function Write-TemporaryFiles {
     $StreamWriter.dispose()
 
     if($Global:Bigipreportconfig.Settings.iRules.ShowDataGroupLinks -eq $true){
-        $WriteStatuses += Write-JSONFile -DestinationFile $Global:datagroupjsonpath -Data @( $Global:ReportObjects.Values.DataGroups.Values | Sort-Object loadbalancer, name )
+        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @( $Global:ReportObjects.Values.DataGroups.Values | Sort-Object loadbalancer, name )
     } else {
-        $WriteStatuses += Write-JSONFile -DestinationFile $Global:datagroupjsonpath -Data @()
+        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @()
     }
     $StreamWriter.dispose()
     Return -not $( $WriteStatuses -Contains $false)
@@ -2097,15 +2000,6 @@ if($TemporaryFilesWritten){
 
     if(Update-ReportData){
         log success "The report has been successfully been updated"
-    } else {
-        #Failed, trying again after two minutes
-        Start-Sleep 120
-
-        if(Update-ReportData){
-            log success "The report has been successfully been updated"
-        } else {
-            log error "Failed to create/update the report"
-        }
     }
 } else {
     log error "The writing of the temporary files failed, no report files will be updated"
