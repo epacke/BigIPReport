@@ -387,7 +387,7 @@ if(Test-Path $ConfigurationFile){
     Exit
 }
 
-log verbose "Starting: PSCommandPath=$PSCommandPath; ConfigurationFile = $ConfigurationFile; Location = $Location; PollLoadBalancer = $PollLoadBalancer;"
+log verbose "Starting: PSCommandPath=$PSCommandPath ConfigurationFile=$ConfigurationFile Location=$Location PollLoadBalancer=$PollLoadBalancer PSScriptRoot=$PSScriptRoot"
 
 ################################################################################################################################################
 #
@@ -1616,6 +1616,12 @@ function GetDeviceInfo {
 
 
 #Region Call Cache LTM information
+if($null -ne $PollLoadBalancer){
+    GetDeviceInfo($PollLoadBalancer)
+    $Global:ReportObjects[$PollLoadBalancer]|ConvertTo-Json -Compress -Depth 10
+    exit
+}
+
 $jobs = @()
 Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup) {
     $IsOnlyDevice = $DeviceGroup.Device.Count -eq 1
@@ -1624,15 +1630,9 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
     $ObjDeviceGroup = New-Object -TypeName "DeviceGroup"
     $ObjDeviceGroup.name = $DeviceGroup.name
 
-    if($null -ne $PollLoadBalancer){
-        GetDeviceInfo($PollLoadBalancer)
-        $Global:ReportObjects[$PollLoadBalancer]|ConvertTo-Json -Compress -Depth 10
-        exit
-    }else{
-        Foreach($Device in $DeviceGroup.Device){
-            $ObjDeviceGroup.ips += $Device
-            $jobs += Start-Job -Name $Device -FilePath $PSCommandPath -ArgumentList $ConfigurationFile,$Device,$PSScriptRoot
-        }
+    Foreach($Device in $DeviceGroup.Device){
+        $ObjDeviceGroup.ips += $Device
+        $jobs += Start-Job -Name $Device -FilePath $PSCommandPath -ArgumentList $ConfigurationFile,$Device,$PSScriptRoot
     }
     $Global:DeviceGroups += $ObjDeviceGroup
 }
