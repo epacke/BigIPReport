@@ -264,13 +264,16 @@
 
 Param($ConfigurationFile = "$PSScriptRoot/bigipreportconfig.xml")
 
-Set-StrictMode -Version 2.0
+Set-StrictMode -Version 1.0
+$ErrorActionPreference = "Stop"
 
 #Script version
 $Global:ScriptVersion = "5.3.1"
 
 #Variable used to calculate the time used to generate the report.
 $StartTime = Get-Date
+
+$Global:hostname = [System.Net.Dns]::GetHostName()
 
 #case sensitive dictionaries
 function c@ {
@@ -451,7 +454,7 @@ Function Send-Errors {
                 $Errorsummary += "</tbody></table></body></html>"
             }
             log verbose "Sending report"
-            $Subject = "$(Get-Date -format d): BigIP Report generation encountered errors"
+            $Subject = "BigIPReport on $($Global:hostname) encountered errors"
             $Body = "$errorsummary"
 
             Foreach($Recipient in $Global:Bigipreportconfig.Settings.ErrorReporting.Recipients.Recipient){
@@ -881,7 +884,6 @@ function Get-LTMInformation {
 
     #Check if ASM is enabled
     if($LoadBalancerObjects.LoadBalancer.modules["asm"]){
-        $ErrorActionPreference = "SilentlyContinue"
 
         Try {
             log verbose "Getting ASM Policy information from $LoadBalancerName"
@@ -903,8 +905,6 @@ function Get-LTMInformation {
         } Catch {
             log error "Unable to load ASM policies from $LoadBalancerName."
         }
-
-        $ErrorActionPreference = "Continue"
     }
 
     #EndRegion
@@ -1471,7 +1471,11 @@ Function Get-AuthToken {
     #Convert the body to Json
     $Body = $Body | ConvertTo-Json
 
-    $Response  = Invoke-RestMethod -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
+    try {
+        $Response  = Invoke-RestMethod -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
+    } catch {
+        return $null
+    }
 
     return $Response.token.token
 }
@@ -1491,9 +1495,11 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
 
         $ObjDeviceGroup.ips += $Device
 
-        $ErrorActionPreference = "SilentlyContinue"
-
         $AuthToken = Get-AuthToken -Loadbalancer $Device
+        if ($null -eq $AuthToken) {
+            log error "Could not get auth token from $Device"
+            Continue
+        }
         $Headers = @{ "X-F5-Auth-Token" = $AuthToken; }
 
         $ObjLoadBalancer = New-Object -TypeName "Loadbalancer"
@@ -1505,11 +1511,6 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
         $BigIPHostname = ""
         $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/global-settings"
         $BigIPHostname = $Response.hostname
-
-        if ($BigIPHostname -eq "") {
-            log error "Could not get hostname from $Device"
-            Continue
-        }
 
         log verbose "Hostname is $BigipHostname for $Device"
 
@@ -1558,7 +1559,8 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
 
         $ObjLoadBalancer.version = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Version.description
         $ObjLoadBalancer.build = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Build.description
-        $ObjLoadBalancer.baseBuild = $VersionInformation.baseBuild
+        #$ObjLoadBalancer.baseBuild = $VersionInformation.baseBuild
+        $ObjLoadBalancer.baseBuild = "unknown"
 
         #Get failover status to determine if the load balancer is active
         $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/cm/failover-status"
@@ -1762,13 +1764,14 @@ Function Write-TemporaryFiles {
     $StreamWriter.dispose()
 
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.preferences -Data $Global:Preferences
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.loggederrors -Data @( $Global:LoggedErrors )
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.devicegroups -Data @( $Global:DeviceGroups | Sort-Object name )
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.loadbalancers -Data @( $Global:ReportObjects.Values.LoadBalancer | Sort-Object name )
+
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.pools -Data @( $Global:ReportObjects.Values.Pools.Values | Sort-Object loadbalancer, name )
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.monitors -Data @( $Global:ReportObjects.Values.Monitors.Values | Sort-Object loadbalancer, name )
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.virtualservers -Data @( $Global:ReportObjects.Values.VirtualServers.Values | Sort-Object loadbalancer,name )
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.certificates -Data @( $Global:ReportObjects.Values.Certificates.Values | Sort-Object loadbalancer, fileName )
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.loggederrors -Data @( $Global:LoggedErrors )
     If ($Global:ReportObjects.Values.ASMPolicies.Keys.Count -gt 0) {
         $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.asmpolicies -Data @( $Global:ReportObjects.Values.ASMPolicies.Values | Sort-Object loadbalancer, name )
     } else {
@@ -1920,7 +1923,7 @@ $Global:HTML = [System.Text.StringBuilder]::new()
 
 [void]$Global:HTML.AppendLine(@"
         <div class="footer">
-            The report was generated on $($env:computername) using BigIP Report version $($Global:ScriptVersion).
+            The report was generated on $($Global:hostname) using BigIPReport version $($Global:ScriptVersion).
             Script started at <span id="Generationtime">$StartTime</span> and took $([int]($(Get-Date)-$StartTime).totalminutes) minutes to finish.<br>
             BigIPReport is written and maintained by <a href="http://loadbalancing.se/about/">Patrik Jonsson</a>
             and <a href="https://rikers.org/">Tim Riker</a>.
