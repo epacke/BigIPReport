@@ -308,7 +308,7 @@ $Global:Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 # default until we load the config
 $Outputlevel = "Normal"
 Function log {
-    Param ([string]$LogType, [string]$Message)
+    Param ([string]$LogType = "info", [string]$Message = "")
 
     #Initiate the log header with date and time
     $CurrentTime =  $(Get-Date -UFormat "%Y-%m-%d %H:%M:%S")
@@ -337,19 +337,17 @@ Function log {
         $Global:LoggedErrors += $LogLineDict
     }
 
-    if(Get-Variable -Name Bigipreportconfig -Scope Global -ErrorAction SilentlyContinue){
-        if($Global:Bigipreportconfig.Settings.LogSettings.Enabled -eq $true){
-            $LogFilePath = $Global:Bigipreportconfig.Settings.LogSettings.LogFilePath
-            $LogLevel = $Global:Bigipreportconfig.Settings.LogSettings.LogLevel
+    if($Global:Bigipreportconfig.Settings.LogSettings.Enabled -eq $true){
+        $LogFilePath = $Global:Bigipreportconfig.Settings.LogSettings.LogFilePath
+        $LogLevel = $Global:Bigipreportconfig.Settings.LogSettings.LogLevel
 
-            switch($Logtype) {
-                "error"   { [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) }
-                "warning" { [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) }
-                "info"    { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
-                "success" { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
-                "verbose" { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
-                default   { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
-            }
+        switch($Logtype) {
+            "error"   { [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) }
+            "warning" { [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) }
+            "info"    { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
+            "success" { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
+            "verbose" { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
+            default   { if($LogLevel -eq "Verbose"){ [System.IO.File]::AppendAllText($LogFilePath, "$LogHeader$Message`n", $Global:Utf8NoBomEncoding) } }
         }
     }
 
