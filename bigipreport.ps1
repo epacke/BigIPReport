@@ -386,8 +386,8 @@ if(Test-Path $ConfigurationFile){
     log error "Failed to load config file $ConfigurationFile from $PSScriptRoot. Aborting."
     Exit
 }
-
-log verbose "Starting: PSCommandPath=$PSCommandPath ConfigurationFile=$ConfigurationFile Location=$Location PollLoadBalancer=$PollLoadBalancer PSScriptRoot=$PSScriptRoot"
+$GetLocation=Get-Location
+log verbose "Starting: PSCommandPath=$PSCommandPath ConfigurationFile=$ConfigurationFile Location=$Location PollLoadBalancer=$PollLoadBalancer PSScriptRoot=$PSScriptRoot GetLocation=$GetLocation"
 
 ################################################################################################################################################
 #
