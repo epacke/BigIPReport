@@ -262,11 +262,21 @@
 #
 ######################################################################################################################################
 
-Param($ConfigurationFile = "$PSScriptRoot/bigipreportconfig.xml")
+Param(
+    $ConfigurationFile = "$PSScriptRoot/bigipreportconfig.xml",
+    $PollLoadBalancer = $null,
+    $Location = $null
+)
 
 Set-StrictMode -Version 1.0
-$ErrorActionPreference = "Stop"
-
+if ($null -eq $PollLoadBalancer) {
+    $ErrorActionPreference = "Stop"
+} else {
+    $ErrorActionPreference = "SilentlyContinue"
+}
+if ($null -ne $Location) {
+    Set-Location $Location
+}
 #Script version
 $Global:ScriptVersion = "5.3.1"
 
@@ -295,12 +305,26 @@ $Global:Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 #
 ################################################################################################################################################
 
+# default until we load the config
+$Outputlevel = "Normal"
 Function log {
     Param ([string]$LogType, [string]$Message)
 
     #Initiate the log header with date and time
     $CurrentTime =  $(Get-Date -UFormat "%Y-%m-%d %H:%M:%S")
     $LogHeader = $CurrentTime + ' ' + $($LogType.toUpper()) + ' '
+
+    if($null -ne $PollLoadBalancer){
+        # child processes just log to stdout
+        $LogLineDict = @{}
+
+        $LogLineDict["datetime"] = $CurrentTime
+        $LogLineDict["severity"] = $LogType.toupper()
+        $LogLineDict["message"] = $Message
+
+        $LogLineDict|ConvertTo-Json -Compress
+        return
+    }
 
     # log errors, warnings, info and success to loggederrors.json
     if($LogType -eq "error" -Or $LogType -eq "warning" -Or $LogType -eq "info" -Or $LogType -eq "success"){
@@ -313,7 +337,7 @@ Function log {
         $Global:LoggedErrors += $LogLineDict
     }
 
-    if(Get-Variable -Name Bigipreportconfig -Scope Global){
+    if(Get-Variable -Name Bigipreportconfig -Scope Global -ErrorAction SilentlyContinue){
         if($Global:Bigipreportconfig.Settings.LogSettings.Enabled -eq $true){
             $LogFilePath = $Global:Bigipreportconfig.Settings.LogSettings.LogFilePath
             $LogLevel = $Global:Bigipreportconfig.Settings.LogSettings.LogLevel
@@ -341,6 +365,7 @@ Function log {
     }
 }
 
+log verbose "Starting: PSCommandPath=$PSCommandPath; ConfigurationFile = $ConfigurationFile; Location = $Location; PollLoadBalancer = $PollLoadBalancer;"
 
 ################################################################################################################################################
 #
@@ -1482,7 +1507,135 @@ Function Get-AuthToken {
 
 #EndRegion
 
+function GetDeviceInfo {
+    Param($Device)
+
+    log verbose "Getting data from $Device"
+
+    $AuthToken = Get-AuthToken -Loadbalancer $Device
+    if ($null -eq $AuthToken) {
+        log error "Could not get auth token from $Device"
+        Return
+    }
+    $Headers = @{ "X-F5-Auth-Token" = $AuthToken; }
+
+    $ObjLoadBalancer = New-Object -TypeName "Loadbalancer"
+    $ObjLoadBalancer.ip = $Device
+    $ObjLoadBalancer.statusvip = New-Object -TypeName "PoolStatusVip"
+
+    $ObjLoadBalancer.isonlydevice = $IsOnlyDevice
+
+    $BigIPHostname = ""
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/global-settings"
+    $BigIPHostname = $Response.hostname
+
+    log verbose "Hostname is $BigipHostname for $Device"
+
+    $ObjLoadBalancer.name = $BigIPHostname
+
+    #Get information about ip, name, model and category
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/hardware"
+    $Platform = $Response.entries.'https://localhost/mgmt/tm/sys/hardware/platform'.nestedStats.entries
+    $systemInfo = $Response.entries.'https://localhost/mgmt/tm/sys/hardware/system-info'.nestedStats.entries
+
+    $ObjLoadBalancer.model = $SystemInfo.psobject.properties.value.nestedStats.entries.platform.description
+    $ObjLoadBalancer.category = $Platform.psobject.properties.value.nestedStats.entries.marketingName.description
+
+    If($ObjLoadBalancer.category -eq "Virtual Edition"){
+        # Virtual Editions is using the base registration keys as serial numbers
+        #$RegistrationKeys = $F5.ManagementLicenseAdministration.get_registration_keys();
+        $BaseRegistrationKey = $RegistrationKeys[0]
+
+        $Serial = "Z" + $BaseRegistrationKey.split("-")[-1]
+    } else {
+        $Serial = $SystemInfo.psobject.properties.value.nestedStats.entries.bigipChassisSerialNum.description
+    }
+
+    $ObjLoadBalancer.serial = $Serial
+
+    If($ObjLoadBalancer.category -eq "VCMP"){
+        #$HostHardwareInfo = $F5.SystemSystemInfo.get_hardware_information() | Where-Object { $_.name -eq "host_platform" }
+
+        if ($HostHardwareInfo.Count -eq 1){
+            $Platform = $HostHardwareInfo.versions | Where-Object { $_.name -eq "Host platform name" }
+
+            if($Platform.Count -gt 0){
+                # Some models includes the disk type for some reason: "C119-SSD". Removing it.
+                $ObjLoadBalancer.model = $Platform.value -replace "-.+", ""
+            }
+        }
+    }
+
+    $ObjLoadBalancer.statusvip.url = $StatusVIP
+
+    #Region Cache Load balancer information
+    log verbose "Fetching information about $BigIPHostname"
+
+    #Get the version information
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/version"
+
+    $ObjLoadBalancer.version = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Version.description
+    $ObjLoadBalancer.build = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Build.description
+    #$ObjLoadBalancer.baseBuild = $VersionInformation.baseBuild
+    $ObjLoadBalancer.baseBuild = "unknown"
+
+    #Get failover status to determine if the load balancer is active
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/cm/failover-status"
+
+    $ObjLoadBalancer.active = $Response.entries.psobject.Properties.value.nestedStats.entries.status.description -eq "ACTIVE"
+    $ObjLoadBalancer.color = $Response.entries.psobject.Properties.value.nestedStats.entries.color.description
+
+    #Get provisioned modules
+    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/provision"
+
+    $ModuleDict = c@{}
+
+    foreach($Module in $Response.items){
+        if ($Module.level -ne "none") {
+            if($ModuleToDescription.keys -contains $Module.name){
+                $ModuleDescription = $ModuleToDescription[$Module.name]
+            } else {
+                $ModuleDescription = "No description found"
+            }
+
+            if(!($ModuleDict.keys -contains $Module.name)){
+                $ModuleDict.add($Module.name, $ModuleDescription)
+            }
+        }
+    }
+
+    $ObjLoadBalancer.modules = $ModuleDict
+
+    $ObjLoadBalancer.success = $true
+
+    $LoadBalancerObjects = c@{}
+    $LoadBalancerObjects.LoadBalancer = $ObjLoadBalancer
+
+    $Global:ReportObjects.add($ObjLoadBalancer.ip, $LoadBalancerObjects)
+
+    #Don't continue if this loabalancer is not active
+    If($ObjLoadBalancer.active -or $IsOnlyDevice){
+        log verbose "Caching LTM information from $BigIPHostname"
+        Get-LTMInformation -headers $Headers -LoadBalancer $LoadBalancerObjects
+        # Record some stats
+        $StatsMsg = "$BigIPHostname Stats:"
+        $StatsMsg += " VS:" + $LoadBalancerObjects.VirtualServers.Keys.Count
+        $StatsMsg += " P:" + $LoadBalancerObjects.Pools.Keys.Count
+        $StatsMsg += " R:" + $LoadBalancerObjects.iRules.Keys.Count
+        $StatsMsg += " DG:" + $LoadBalancerObjects.DataGroups.Keys.Count
+        $StatsMsg += " C:" + $LoadBalancerObjects.Certificates.Keys.Count
+        $StatsMsg += " M:" + $LoadBalancerObjects.Monitors.Keys.Count
+        $StatsMsg += " ASM:" + $LoadBalancerObjects.ASMPolicies.Keys.Count
+        log info $StatsMsg
+    } else {
+        log info "$BigIPHostname is not active, and won't be indexed"
+        return
+    }
+}
+
+
 #Region Call Cache LTM information
+$jobs = @()
 Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup) {
     $IsOnlyDevice = $DeviceGroup.Device.Count -eq 1
     $StatusVIP = $DeviceGroup.StatusVip
@@ -1490,135 +1643,66 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
     $ObjDeviceGroup = New-Object -TypeName "DeviceGroup"
     $ObjDeviceGroup.name = $DeviceGroup.name
 
-    Foreach($Device in $DeviceGroup.Device){
-        log verbose "Getting data from $Device"
-
-        $ObjDeviceGroup.ips += $Device
-
-        $AuthToken = Get-AuthToken -Loadbalancer $Device
-        if ($null -eq $AuthToken) {
-            log error "Could not get auth token from $Device"
-            Continue
+    if($null -ne $PollLoadBalancer){
+        GetDeviceInfo($PollLoadBalancer)
+        $Global:ReportObjects[$PollLoadBalancer]|ConvertTo-Json -Compress -Depth 10
+        exit
+    }else{
+        Foreach($Device in $DeviceGroup.Device){
+            $ObjDeviceGroup.ips += $Device
+            $jobs += Start-Job -Name $Device -FilePath $PSCommandPath -ArgumentList $ConfigurationFile,$Device,$PSScriptRoot
         }
-        $Headers = @{ "X-F5-Auth-Token" = $AuthToken; }
-
-        $ObjLoadBalancer = New-Object -TypeName "Loadbalancer"
-        $ObjLoadBalancer.ip = $Device
-        $ObjLoadBalancer.statusvip = New-Object -TypeName "PoolStatusVip"
-
-        $ObjLoadBalancer.isonlydevice = $IsOnlyDevice
-
-        $BigIPHostname = ""
-        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/global-settings"
-        $BigIPHostname = $Response.hostname
-
-        log verbose "Hostname is $BigipHostname for $Device"
-
-        $ObjLoadBalancer.name = $BigIPHostname
-
-        #Get information about ip, name, model and category
-        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/hardware"
-        $Platform = $Response.entries.'https://localhost/mgmt/tm/sys/hardware/platform'.nestedStats.entries
-        $systemInfo = $Response.entries.'https://localhost/mgmt/tm/sys/hardware/system-info'.nestedStats.entries
-
-        $ObjLoadBalancer.model = $SystemInfo.psobject.properties.value.nestedStats.entries.platform.description
-        $ObjLoadBalancer.category = $Platform.psobject.properties.value.nestedStats.entries.marketingName.description
-
-        If($ObjLoadBalancer.category -eq "Virtual Edition"){
-            # Virtual Editions is using the base registration keys as serial numbers
-            #$RegistrationKeys = $F5.ManagementLicenseAdministration.get_registration_keys();
-            $BaseRegistrationKey = $RegistrationKeys[0]
-
-            $Serial = "Z" + $BaseRegistrationKey.split("-")[-1]
-        } else {
-            $Serial = $SystemInfo.psobject.properties.value.nestedStats.entries.bigipChassisSerialNum.description
-        }
-
-        $ObjLoadBalancer.serial = $Serial
-
-        If($ObjLoadBalancer.category -eq "VCMP"){
-            #$HostHardwareInfo = $F5.SystemSystemInfo.get_hardware_information() | Where-Object { $_.name -eq "host_platform" }
-
-            if ($HostHardwareInfo.Count -eq 1){
-                $Platform = $HostHardwareInfo.versions | Where-Object { $_.name -eq "Host platform name" }
-
-                if($Platform.Count -gt 0){
-                    # Some models includes the disk type for some reason: "C119-SSD". Removing it.
-                    $ObjLoadBalancer.model = $Platform.value -replace "-.+", ""
-                }
-            }
-        }
-
-        $ObjLoadBalancer.statusvip.url = $StatusVIP
-
-        #Region Cache Load balancer information
-        log verbose "Fetching information about $BigIPHostname"
-
-        #Get the version information
-        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/version"
-
-        $ObjLoadBalancer.version = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Version.description
-        $ObjLoadBalancer.build = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Build.description
-        #$ObjLoadBalancer.baseBuild = $VersionInformation.baseBuild
-        $ObjLoadBalancer.baseBuild = "unknown"
-
-        #Get failover status to determine if the load balancer is active
-        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/cm/failover-status"
-
-        $ObjLoadBalancer.active = $Response.entries.psobject.Properties.value.nestedStats.entries.status.description -eq "ACTIVE"
-        $ObjLoadBalancer.color = $Response.entries.psobject.Properties.value.nestedStats.entries.color.description
-
-        #Get provisioned modules
-        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/provision"
-
-        $ModuleDict = c@{}
-
-        foreach($Module in $Response.items){
-            if ($Module.level -ne "none") {
-                if($ModuleToDescription.keys -contains $Module.name){
-                    $ModuleDescription = $ModuleToDescription[$Module.name]
-                } else {
-                    $ModuleDescription = "No description found"
-                }
-
-                if(!($ModuleDict.keys -contains $Module.name)){
-                    $ModuleDict.add($Module.name, $ModuleDescription)
-                }
-            }
-        }
-
-        $ObjLoadBalancer.modules = $ModuleDict
-
-        $ObjLoadBalancer.success = $true
-
-        $LoadBalancerObjects = c@{}
-        $LoadBalancerObjects.LoadBalancer = $ObjLoadBalancer
-
-        $Global:ReportObjects.add($ObjLoadBalancer.ip, $LoadBalancerObjects)
-
-        #Don't continue if this loabalancer is not active
-        If($ObjLoadBalancer.active -or $IsOnlyDevice){
-            log verbose "Caching LTM information from $BigIPHostname"
-            Get-LTMInformation -headers $Headers -LoadBalancer $LoadBalancerObjects
-            # Record some stats
-            $StatsMsg = "$BigIPHostname Stats:"
-            $StatsMsg += " VS:" + $LoadBalancerObjects.VirtualServers.Keys.Count
-            $StatsMsg += " P:" + $LoadBalancerObjects.Pools.Keys.Count
-            $StatsMsg += " R:" + $LoadBalancerObjects.iRules.Keys.Count
-            $StatsMsg += " DG:" + $LoadBalancerObjects.DataGroups.Keys.Count
-            $StatsMsg += " C:" + $LoadBalancerObjects.Certificates.Keys.Count
-            $StatsMsg += " M:" + $LoadBalancerObjects.Monitors.Keys.Count
-            $StatsMsg += " ASM:" + $LoadBalancerObjects.ASMPolicies.Keys.Count
-            log info $StatsMsg
-        } else {
-            log info "$BigIPHostname is not active, and won't be indexed"
-            Continue
-        }
-        #EndRegion
     }
     $Global:DeviceGroups += $ObjDeviceGroup
 }
 #EndRegion
+
+#Collect data from each load balancer
+$Global:Out = c@{}
+$Global:Out.ASMPolicies=@()
+$Global:Out.Certificates=@()
+$Global:Out.Datagroups=@()
+$Global:Out.iRules=@()
+$Global:Out.Monitors=@()
+$Global:Out.Pools=@()
+$Global:Out.VirtualServers=@()
+
+do {
+    $remaining=0
+    foreach($job in $jobs){
+        if ($job.State -ne "Completed") {
+            $remaining++
+        }
+        if ($job.HasMoreData) {
+            $lines=Receive-Job -Job $job
+            Foreach($line in $lines) {
+                try {
+                    $obj=ConvertFrom-Json $line
+                    # process contents of $obj, if log, add to global log and echo to screen, else store results.
+                    if($obj.datetime) {
+                        log $obj.severity ($job.name+':'+$obj.message) $obj.datetime
+                    } elseif ($obj.LoadBalancer.ip) {
+                        $Global:ReportObjects.add($obj.LoadBalancer.ip, $obj)
+                        Foreach ($thing in ("ASMPolicies","Certificates","Datagroups","iRules","Monitors","Pools","VirtualServers")) {
+                            Foreach($object in $obj.$thing.psobject.Properties) {
+                                $Global:Out.$thing += $object.Value
+                            }
+                        }
+                    } else {
+                        Write-Host "Temp:$line"
+                    }
+                } catch {
+                    # nothing
+                }
+            }
+        }
+    }
+    Write-Host -NoNewLine "Remaining: $remaining `r"
+    Start-Sleep 1
+} until ($remaining -eq 0)
+# wait for jobs to shut down
+$jobs | Wait-Job
+$jobs | Remove-Job
 
 #Region Function Test-ReportData
 
@@ -1767,27 +1851,23 @@ Function Write-TemporaryFiles {
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.loggederrors -Data @( $Global:LoggedErrors )
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.devicegroups -Data @( $Global:DeviceGroups | Sort-Object name )
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.loadbalancers -Data @( $Global:ReportObjects.Values.LoadBalancer | Sort-Object name )
-
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.pools -Data @( $Global:ReportObjects.Values.Pools.Values | Sort-Object loadbalancer, name )
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.monitors -Data @( $Global:ReportObjects.Values.Monitors.Values | Sort-Object loadbalancer, name )
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.virtualservers -Data @( $Global:ReportObjects.Values.VirtualServers.Values | Sort-Object loadbalancer,name )
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.certificates -Data @( $Global:ReportObjects.Values.Certificates.Values | Sort-Object loadbalancer, fileName )
-    If ($Global:ReportObjects.Values.ASMPolicies.Keys.Count -gt 0) {
-        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.asmpolicies -Data @( $Global:ReportObjects.Values.ASMPolicies.Values | Sort-Object loadbalancer, name )
-    } else {
-        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.asmpolicies -Data @()
-    }
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.nat -Data $Global:NATdict
 
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.pools -Data @( $Global:Out.Pools | Sort-Object loadbalancer, name )
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.monitors -Data @( $Global:Out.Monitors | Sort-Object loadbalancer, name )
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.virtualservers -Data @( $Global:Out.VirtualServers | Sort-Object loadbalancer,name )
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.certificates -Data @( $Global:Out.Certificates | Sort-Object loadbalancer, fileName )
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.asmpolicies -Data @( $Global:Out.ASMPolicies | Sort-Object loadbalancer, name )
+
     if($Global:Bigipreportconfig.Settings.iRules.Enabled -eq $true){
-        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.irules -Data @($Global:ReportObjects.Values.iRules.Values | Sort-Object loadbalancer, name )
+        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.irules -Data @($Global:Out.iRules | Sort-Object loadbalancer, name )
     } else {
         log verbose "iRule links disabled in config. Writing empty json object to $($Global:irules + ".tmp")"
 
         $StreamWriter = New-Object System.IO.StreamWriter($($Global:irules + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
 
         #Since rules has been disabled, only write those defined
-        $RuleScope = $Global:ReportObjects.Values.iRules.Values | Where-Object { $_.name -in $Bigipreportconfig.Settings.iRules.iRule.iRuleName -and $_.loadbalancer -in $Bigipreportconfig.Settings.iRules.iRule.loadbalancer }
+        $RuleScope = $Global:Out.iRules | Where-Object { $_.name -in $Bigipreportconfig.Settings.iRules.iRule.iRuleName -and $_.loadbalancer -in $Bigipreportconfig.Settings.iRules.iRule.loadbalancer }
 
         if($RuleScope.count -eq 0){
             $StreamWriter.Write("[]")
@@ -1804,7 +1884,7 @@ Function Write-TemporaryFiles {
     $StreamWriter.dispose()
 
     if($Global:Bigipreportconfig.Settings.iRules.ShowDataGroupLinks -eq $true){
-        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @( $Global:ReportObjects.Values.DataGroups.Values | Sort-Object loadbalancer, name )
+        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @( $Global:Out.Datagroups | Sort-Object loadbalancer, name )
     } else {
         $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @()
     }
@@ -1967,13 +2047,14 @@ $Global:Preferences['showAdcLinks'] = ($Global:Bigipreportconfig.Settings.showAd
 $StatsMsg = "Stats:"
 $StatsMsg += " G:" + $Global:DeviceGroups.Count
 $StatsMsg += " LB:" + $Global:ReportObjects.Values.LoadBalancer.Count
-$StatsMsg += " VS:" + $Global:ReportObjects.Values.VirtualServers.Keys.Count
-$StatsMsg += " P:" + $Global:ReportObjects.Values.Pools.Keys.Count
-$StatsMsg += " R:" + $Global:ReportObjects.Values.iRules.Keys.Count
-$StatsMsg += " DG:" + $Global:ReportObjects.Values.DataGroups.Keys.Count
-$StatsMsg += " C:" + $Global:ReportObjects.Values.Certificates.Keys.Count
-$StatsMsg += " M:" + $Global:ReportObjects.Values.Monitors.Keys.Count
-$StatsMsg += " ASM:" + $Global:ReportObjects.Values.ASMPolicies.Keys.Count
+
+$StatsMsg += " VS:" + $Global:Out.VirtualServers.Length
+$StatsMsg += " P:" + $Global:Out.Pools.Length
+$StatsMsg += " R:" + $Global:Out.iRules.Length
+$StatsMsg += " DG:" + $Global:Out.Datagroups.Length
+$StatsMsg += " C:" + $Global:Out.Certificates.Length
+$StatsMsg += " M:" + $Global:Out.Monitors.Length
+$StatsMsg += " ASM:" + $Global:Out.ASMPolicies.Length
 log info $StatsMsg
 
 # Write temporary files and then update the report
