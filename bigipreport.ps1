@@ -1434,8 +1434,6 @@ function Get-LTMInformation {
     #Region Get Orphaned Pools
     log verbose "Detecting orphaned pools on $LoadBalancerName"
 
-    $LoadBalancerObjects.OrphanPools = @()
-
     $VirtualServerPools = $LoadBalancerObjects.VirtualServers.Values.Pools | Sort-Object -Unique
     $DataGroupPools = $LoadBalancerObjects.DataGroups.Values.pools | Sort-Object -Unique
 
@@ -1443,22 +1441,6 @@ function Get-LTMInformation {
         If ($VirtualServerPools -NotContains $PoolName -and
                 $DataGroupPools -NotContains $PoolName){
             $LoadBalancerObjects.Pools[$PoolName].orphaned = $true
-
-            $ObjTempVirtualServer = New-Object -TypeName "VirtualServer"
-
-            $ObjTempVirtualServer.name = $PoolName + "(Orphan)"
-            $ObjTempVirtualServer.ip = "N"
-            $ObjTempVirtualServer.port = "A"
-            $ObjTempVirtualServer.httpprofile = "None"
-            $ObjTempVirtualServer.sslprofileclient += "None"
-            $ObjTempVirtualServer.sslprofileserver += "None"
-            $ObjTempVirtualServer.compressionprofile = "None"
-            $ObjTempVirtualServer.persistence = "None"
-            $ObjTempVirtualServer.irules = @()
-            $ObjTempVirtualServer.pools += $PoolName
-            $ObjTempVirtualServer.loadbalancer = $LoadBalancerName
-
-            $LoadBalancerObjects.OrphanPools += $ObjTempVirtualServer
         }
     }
     #EndRegion
