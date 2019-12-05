@@ -26,9 +26,8 @@ Foreach($PoolStat in $Response1.entries.psobject.properties.Value) {
     }
 }
 
-$Response2 = Invoke-WebRequest -Headers $Headers -Uri "https://$Device/mgmt/tm/ltm/pool/members/stats?`$filter=partition" | ConvertFrom-Json
-
-#$Response2 = Invoke-WebRequest -Headers $Headers -Uri "https://$Device/mgmt/tm/ltm/pool/members/stats?`$filter=partition" | ConvertFrom-Json -AsHashtable
+$Response2 = Invoke-WebRequest -Headers $Headers -Uri "https://$Device/mgmt/tm/ltm/pool/members/stats?`$filter=partition" |
+        ConvertFrom-Json -AsHashtable
 
 Foreach($PoolStat in $Response2.entries.Values) {
     Write-Host "Pool:" $PoolStat.nestedStats.entries.tmName.description
