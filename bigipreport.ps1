@@ -1,5 +1,5 @@
 #! /usr/bin/pwsh
-#Requires -Version 6
+#Requires -Version 5
 ######################################################################################################################################
 #
 #        Copyright (C) 2016 Patrik Jonsson <patrik.jonsson#at#gmail-com>
@@ -1667,7 +1667,8 @@ do {
             $lines=Receive-Job -Job $job
             Foreach($line in $lines) {
                 try {
-                    $obj=ConvertFrom-Json -AsHashTable $line
+                    #$obj=ConvertFrom-Json -AsHashTable $line
+                    $obj=ConvertFrom-Json $line
                     # process contents of $obj, if log, add to global log and echo to screen, else store results.
                     if($obj.datetime -and $obj.severity -and $obj.message) {
                         log $obj.severity ($job.name+':'+$obj.message) $obj.datetime
