@@ -1,5 +1,5 @@
 #! /usr/bin/pwsh
-#Requires -Version 5
+#Requires -Version 6
 ######################################################################################################################################
 #
 #        Copyright (C) 2016 Patrik Jonsson <patrik.jonsson#at#gmail-com>
@@ -212,7 +212,7 @@
 #        5.1.5        2018-05-14      delay loading tables until used, data group table, pool table w/ orphans      Tim Riker       No
 #                                     SSL server profile, column filters for all tables, simplify member display
 #                                     pool / member columns sort by count when clicked, some stats in log tab
-#        5.1.6        2018-05-18      Process Datagroups to build more pool links, track more Datagroup types       Tim Riker       No
+#        5.1.6        2018-05-18      Process DataGroups to build more pool links, track more Datagroup types       Tim Riker       No
 #                                     Datagroup links in iRules when no partition is specified
 #                                     adcLinks open in new window, show referenced datagroups in iRule table
 #                                     write some stats at the end of the build, force arrays for more json files
@@ -253,6 +253,7 @@
 #                                     snat pool, new status searching, updated tab/button/input styling
 #                                     monitor column on pool table, new preferences.json
 #        5.3.1        2019-xx-xx      remove pssnapin, now runs on other platforms                                  Tim Riker       No
+#                                     requires powershell 6.x+ to get ConvertFrom-Json -AsHashTable
 #
 #        This script generates a report of the LTM configuration on F5 BigIP's.
 #        It started out as pet project to help co-workers know which traffic goes where but grew.
@@ -272,7 +273,7 @@ Set-StrictMode -Version 1.0
 if ($null -eq $PollLoadBalancer) {
     $ErrorActionPreference = "Stop"
 } else {
-    $ErrorActionPreference = "SilentlyContinue"
+    $ErrorActionPreference = "Stop"
 }
 # PowerShell does not inherit PWD in pre v7
 if ($null -ne $Location) {
@@ -1138,7 +1139,7 @@ function Get-LTMInformation {
 
     #EndRegion
 
-    #Region Cache Datagroups
+    #Region Cache DataGroups
 
     log verbose "Caching datagroups from $LoadBalancerName"
 
@@ -1601,8 +1602,8 @@ function GetDeviceInfo {
 
     $Global:ReportObjects.add($ObjLoadBalancer.ip, $LoadBalancerObjects)
 
-    #Don't continue if this loabalancer is not active
-    If($ObjLoadBalancer.active -or $IsOnlyDevice){
+    #Don't continue if this loadbalancer is not active
+    If($ObjLoadBalancer.active -or $ObjLoadBalancer.isonlydevice){
         log verbose "Caching LTM information from $BigIPHostname"
         Get-LTMInformation -headers $Headers -LoadBalancer $LoadBalancerObjects
         # Record some stats
@@ -1624,12 +1625,6 @@ function GetDeviceInfo {
 
 
 #Region Call Cache LTM information
-if($null -ne $PollLoadBalancer){
-    GetDeviceInfo($PollLoadBalancer)
-    $Global:ReportObjects[$PollLoadBalancer]|ConvertTo-Json -Compress -Depth 10
-    exit
-}
-
 $jobs = @()
 Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup) {
     $IsOnlyDevice = $DeviceGroup.Device.Count -eq 1
@@ -1640,7 +1635,13 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
 
     Foreach($Device in $DeviceGroup.Device){
         $ObjDeviceGroup.ips += $Device
-        $jobs += Start-Job -Name $Device -FilePath $PSCommandPath -ArgumentList $ConfigurationFile,$Device,$PSScriptRoot
+        if($null -eq $PollLoadBalancer){
+            $jobs += Start-Job -Name $Device -FilePath $PSCommandPath -ArgumentList $ConfigurationFile,$Device,$PSScriptRoot
+        } elseif ($Device -eq $PollLoadBalancer){
+            GetDeviceInfo($PollLoadBalancer)
+            $Global:ReportObjects[$PollLoadBalancer]|ConvertTo-Json -Compress -Depth 10
+            exit
+        }
     }
     $Global:DeviceGroups += $ObjDeviceGroup
 }
@@ -1650,7 +1651,7 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
 $Global:Out = c@{}
 $Global:Out.ASMPolicies=@()
 $Global:Out.Certificates=@()
-$Global:Out.Datagroups=@()
+$Global:Out.DataGroups=@()
 $Global:Out.iRules=@()
 $Global:Out.Monitors=@()
 $Global:Out.Pools=@()
@@ -1666,13 +1667,13 @@ do {
             $lines=Receive-Job -Job $job
             Foreach($line in $lines) {
                 try {
-                    $obj=ConvertFrom-Json $line
+                    $obj=ConvertFrom-Json -AsHashTable $line
                     # process contents of $obj, if log, add to global log and echo to screen, else store results.
                     if($obj.datetime -and $obj.severity -and $obj.message) {
                         log $obj.severity ($job.name+':'+$obj.message) $obj.datetime
                     } elseif ($obj.LoadBalancer.ip) {
                         $Global:ReportObjects.add($obj.LoadBalancer.ip, $obj)
-                        Foreach ($thing in ("ASMPolicies","Certificates","Datagroups","iRules","Monitors","Pools","VirtualServers")) {
+                        Foreach ($thing in ("ASMPolicies","Certificates","DataGroups","iRules","Monitors","Pools","VirtualServers")) {
                             Foreach($object in $obj.$thing.psobject.Properties) {
                                 $Global:Out.$thing += $object.Value
                             }
@@ -1872,7 +1873,7 @@ Function Write-TemporaryFiles {
     $StreamWriter.dispose()
 
     if($Global:Bigipreportconfig.Settings.iRules.ShowDataGroupLinks -eq $true){
-        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @( $Global:Out.Datagroups | Sort-Object loadbalancer, name )
+        $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @( $Global:Out.DataGroups | Sort-Object loadbalancer, name )
     } else {
         $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @()
     }
@@ -2038,7 +2039,7 @@ $StatsMsg += " LB:" + $Global:ReportObjects.Values.LoadBalancer.Count
 $StatsMsg += " VS:" + $Global:Out.VirtualServers.Length
 $StatsMsg += " P:" + $Global:Out.Pools.Length
 $StatsMsg += " R:" + $Global:Out.iRules.Length
-$StatsMsg += " DG:" + $Global:Out.Datagroups.Length
+$StatsMsg += " DG:" + $Global:Out.DataGroups.Length
 $StatsMsg += " C:" + $Global:Out.Certificates.Length
 $StatsMsg += " M:" + $Global:Out.Monitors.Length
 $StatsMsg += " ASM:" + $Global:Out.ASMPolicies.Length
