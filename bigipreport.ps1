@@ -1,5 +1,5 @@
 #! /usr/bin/pwsh
-#Requires -Version 5
+#Requires -Version 6
 ######################################################################################################################################
 #
 #        Copyright (C) 2016 Patrik Jonsson <patrik.jonsson#at#gmail-com>
@@ -269,7 +269,7 @@ Param(
     $Location = $null
 )
 
-Set-StrictMode -Version 1.0
+Set-StrictMode -Version Latest
 if ($null -eq $PollLoadBalancer) {
     $ErrorActionPreference = "Stop"
 } else {
@@ -516,13 +516,13 @@ if($null -eq $Global:Bigipreportconfig.Settings.Credentials.Password -or "" -eq 
     $SaneConfig = $false
 }
 
-if($null -eq $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup -or 0 -eq $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup.Device.Count){
+if($null -eq $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup -or 0 -eq @($Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup.Device).Count){
     log error "No load balancers configured"
     $SaneConfig = $false
 }
 
 if($null -eq $Global:Bigipreportconfig.Settings.DefaultDocument -or "" -eq $Global:Bigipreportconfig.Settings.DefaultDocument){
-    log error "No default document cofigured"
+    log error "No default document configured"
     $SaneConfig = $false
 }
 
@@ -631,7 +631,7 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
         $SaneConfig = $false
     }
 
-    If ($null -eq $DeviceGroup.Device -or ($DeviceGroup.Device | Where-Object { $_ -ne "" } ).Count -eq 0) {
+    If ($null -eq $DeviceGroup.Device -or @($DeviceGroup.Device | Where-Object { $_ -ne "" } ).Count -eq 0) {
         log error "A device group does not have any devices, please re-check your configuration"
         $SaneConfig = $false
     }
@@ -918,7 +918,7 @@ function Get-LTMInformation {
         Try {
             log verbose "Getting ASM Policy information from $LoadBalancerName"
 
-            $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/asm/policies"
+            $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/asm/policies"
             $Policies = $Response.items
 
             Foreach($Policy in $Policies){
@@ -946,19 +946,29 @@ function Get-LTMInformation {
     $LoadBalancerObjects.Certificates = c@{}
 
     $Response = ""
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert?`$filter=partition"
     $Certificates = $Response.items
 
     $unixEpochStart = new-object DateTime 1970,1,1,0,0,0,([DateTimeKind]::Utc)
     Foreach($Certificate in $Certificates){
         $ObjSubject = New-Object -TypeName "CertificateDetails"
 
-        $ObjSubject.commonName = $Certificate.commonName
-        $ObjSubject.countryName = $Certificate.country
-        $ObjSubject.stateName = $Certificate.state
-        $ObjSubject.localityName = $Certificate.city
+        if (Get-Member -inputobject $Certificate -name "commonName") {
+            $ObjSubject.commonName = $Certificate.commonName
+        }
+        if (Get-Member -inputobject $Certificate -name "country") {
+            $ObjSubject.countryName = $Certificate.country
+        }
+        if (Get-Member -inputobject $Certificate -name "state") {
+            $ObjSubject.stateName = $Certificate.state
+        }
+        if (Get-Member -inputobject $Certificate -name "city") {
+            $ObjSubject.localityName = $Certificate.city
+        }
         $ObjSubject.organizationName = $Certificate.organization
-        $ObjSubject.divisionName = $Certificate.ou
+        if (Get-Member -inputobject $Certificate -name "ou") {
+            $ObjSubject.divisionName = $Certificate.ou
+        }
 
         $ObjCertificate = New-Object -TypeName "Certificate"
 
@@ -966,8 +976,16 @@ function Get-LTMInformation {
         $expiration = [datetime]::ParseExact($Certificate.apiRawValues.expiration.Replace(" GMT","").Replace("  "," "),"MMM d H:mm:ss yyyy",$null)
         $ObjCertificate.expirationDate = ($expiration - $unixEpochStart).TotalSeconds
         $ObjCertificate.subject = $ObjSubject
-        $ObjCertificate.subjectAlternativeName = $Certificate.subjectAlternativeName
-        $ObjCertificate.issuer = $Certificate.issuer
+        if (Get-Member -inputobject $Certificate -name "subjectAlternativeName") {
+            $ObjCertificate.subjectAlternativeName = $Certificate.subjectAlternativeName
+        } else {
+            $ObjCertificate.subjectAlternativeName = ""
+        }
+        if (Get-Member -inputobject $Certificate -name "issuer") {
+            $ObjCertificate.issuer = $Certificate.issuer
+        } else {
+            $ObjCertificate.issuer = ""
+        }
         $ObjCertificate.loadbalancer = $LoadBalancerName
 
         $LoadBalancerObjects.Certificates.add($ObjCertificate.fileName, $ObjCertificate)
@@ -981,7 +999,7 @@ function Get-LTMInformation {
 
     log verbose "Caching nodes from $LoadBalancerName"
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/node?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/node?`$filter=partition"
     $Nodes = $Response.items
 
     Foreach($Node in $Nodes) {
@@ -989,7 +1007,11 @@ function Get-LTMInformation {
 
         $ObjTempNode.ip = $Node.address
         $ObjTempNode.name = $Node.name
-        $ObjTempNode.description = $Node.description
+        if (Get-Member -inputobject $Node -name "description") {
+            $ObjTempNode.description = $Node.description
+        } else {
+            $ObjTempNode.description = ""
+        }
         $ObjTempNode.loadbalancer = $LoadBalancerName
 
         if($ObjTempNode.name -eq ""){
@@ -1008,9 +1030,9 @@ function Get-LTMInformation {
     log verbose "Caching monitors from $LoadBalancerName"
 
     #Save the HTTP monitors separately since they have different properties
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/http?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/http?`$filter=partition"
     [array]$HttpMonitors = $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/https?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/https?`$filter=partition"
     [array]$HttpMonitors += $Response.items
 
     Foreach($HttpMonitor in $HttpMonitors){
@@ -1018,7 +1040,11 @@ function Get-LTMInformation {
 
         $ObjTempMonitor.name = $HttpMonitor.name
         $ObjTempMonitor.sendstring = $HttpMonitor.send
-        $ObjTempMonitor.receivestring = $HttpMonitor.recv
+        if (Get-Member -inputobject $HttpMonitor -name "recv") {
+            $ObjTempMonitor.receivestring = $HttpMonitor.recv
+        } else {
+            $ObjTempMonitor.receivestring = ""
+        }
         $ObjTempMonitor.interval = $HttpMonitor.interval
         $ObjTempMonitor.timeout = $HttpMonitor.timeout
         $ObjTempMonitor.type = $HttpMonitor.kind.Replace("tm:ltm:monitor:","")
@@ -1029,19 +1055,19 @@ function Get-LTMInformation {
     }
 
     #Save the monitors which has interval and timeout properties
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/icmp?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/icmp?`$filter=partition"
     [array]$OtherMonitors = $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/gateway-icmp?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/gateway-icmp?`$filter=partition"
     [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/real-server?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/real-server?`$filter=partition"
     [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/snmp-dca?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/snmp-dca?`$filter=partition"
     [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/tcp-half-open?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/tcp-half-open?`$filter=partition"
     [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/tcp?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/tcp?`$filter=partition"
     [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/udp?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/udp?`$filter=partition"
     [array]$OtherMonitors += $Response.items
 
     Foreach($OtherMonitor in $OtherMonitors){
@@ -1066,13 +1092,13 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.Pools = c@{}
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?`$filter=partition&expandSubcollections=true"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?`$filter=partition&expandSubcollections=true"
     [array]$Pools = $Response.items
 
     $PoolStatsDict = c@{}
     If($MajorVersion -ge 12){
         # need 12+ to support members/stats
-        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool/members/stats?`$filter=partition"
+        $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool/members/stats?`$filter=partition"
         Foreach($PoolStat in $Response.entries.psobject.properties) {
             $PoolStatsDict.add($PoolStat.Value.psobject.Properties.Value.entries.tmName.description, $PoolStat.Value.psobject.Properties.Value.entries)
         }
@@ -1082,57 +1108,75 @@ function Get-LTMInformation {
         $ObjTempPool = New-Object -Type Pool
         $ObjTempPool.loadbalancer = $LoadBalancerName
         $ObjTempPool.name = $Pool.fullPath
-        if($Pool.monitor){
+        if (Get-Member -inputobject $Pool -name 'monitor') {
             $objTempPool.monitors = $Pool.monitor.Trim() -split " and "
         }
         $ObjTempPool.loadbalancingmethod = $Pool.loadBalancingMode
         $ObjTempPool.actiononservicedown = $Pool.serviceDownAction
         $ObjTempPool.allownat = $Pool.allowNat
         $ObjTempPool.allowsnat = $Pool.allowSnat
-        $ObjTempPool.description = $Pool.description
+        if (Get-Member -inputobject $Pool -name 'description') {
+            $ObjTempPool.description = $Pool.description
+        } else {
+            $ObjTempPool.description = ""
+        }
         if(!$PoolStatsDict[$Pool.fullPath]){
             # < v12 does not support member/stats, so pool stats for each pool
             $uri = "https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") +"/stats?`$filter=partition"
-            $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri $uri
+            $Response = Invoke-RestMethod -Headers $Headers -Uri $uri
             $PoolStatsDict.add($Pool.fullPath, $Response.entries)
         }
         $ObjTempPool.availability = $PoolStatsDict[$Pool.fullPath].'status.availabilityState'.description
         $ObjTempPool.enabled = $PoolStatsDict[$Pool.fullPath].'status.enabledState'.description
-        $ObjTempPool.status = $PoolStatsDict[$Pool.fullPath].'status.enabledReason'.description
+        if (Get-Member -inputobject $PoolStatsDict[$Pool.fullPath] -name 'status.enabledReason') {
+            $ObjTempPool.status = $PoolStatsDict[$Pool.fullPath].'status.enabledReason'.description
+        } else {
+            $ObjTempPool.status = ""
+        }
 
         $MemberStatsDict = c@{}
-        if ($PoolStatsDict[$Pool.fullPath].psobject.Properties.Value.nestedStats.entries.psobject.Properties.entries) {
+        if (Get-Member -inputobject $PoolStatsDict[$Pool.fullPath] -name 'psobject.Properties.Value.nestedStats.entries.psobject.Properties.entries') {
             $MemberStats = $PoolStatsDict[$Pool.fullPath].psobject.Properties.Value.nestedStats.entries.psobject.Properties
         } else {
             $uri = "https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") +"/members/stats?`$filter=partition"
-            $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri $uri
-            $MemberStats = $Response.entries.psobject.Properties
+            $Response = Invoke-RestMethod -Headers $Headers -Uri $uri
+            if (Get-Member -inputobject $Response -name 'entries') {
+                $MemberStats = $Response.entries.psobject.Properties
+            } else {
+                $MemberStats = @()
+            }
             #.psobject.Properties.Value.nestedStats.entries
         }
         Foreach($MemberStat in $MemberStats) {
-            if ($MemberStat.psobject.Properties.Value.nestedStats.entries.nodeName.description) {
-                $MemberStatsDict.add($MemberStat.psobject.Properties.Value.nestedStats.entries.nodeName.description + ":" + $MemberStat.psobject.Properties.Value.nestedStats.entries.port.value, $MemberStat.psobject.Properties.Value.nestedStats.entries)
-            } else {
+            #if (Get-Member -inputobject $MemberStat -name 'Value.nestedStats.entries.nodeName.description') {
+                $MemberStatsDict.add($MemberStat.Value.nestedStats.entries.nodeName.description + ":" + $MemberStat.Value.nestedStats.entries.port.value, $MemberStat.Value.nestedStats.entries)
+            #} else {
                 #FIXME: How do we get here?
                 #$ObjTempPool.name + "|" + $MemberStat.psobject.Properties.Value.nestedStats.entries.nodeName.description + ":" + $MemberStat.psobject.Properties.Value.nestedStats.entries.port.value
-            }
+            #}
         }
-        Foreach($PoolMember in $Pool.membersReference.items) {
-            #Create a new temporary object of the member class
-            $ObjTempMember = New-Object Member
-            $ObjTempMember.Name = $PoolMember.fullPath
-            $ObjTempMember.ip = $PoolMember.address
-            $ObjTempMember.Port = $PoolMember.name.split(":")[1]
-            $ObjTempMember.Priority = $PoolMember.priorityGroup
-            $ObjTempMember.Status = $PoolMember.state
+        if (Get-Member -inputobject $Pool -name 'membersReference.items') {
+            Foreach($PoolMember in $Pool.membersReference.items) {
+                #Create a new temporary object of the member class
+                $ObjTempMember = New-Object Member
+                $ObjTempMember.Name = $PoolMember.fullPath
+                $ObjTempMember.ip = $PoolMember.address
+                $ObjTempMember.Port = $PoolMember.name.split(":")[1]
+                $ObjTempMember.Priority = $PoolMember.priorityGroup
+                $ObjTempMember.Status = $PoolMember.state
 
-            #$ObjTempPool.name + "|" + $PoolMember.fullPath + "|" + $MemberStatsDict[$PoolMember.fullPath].'status.availabilityState'.description
-            $ObjTempMember.Availability = $MemberStatsDict[$PoolMember.fullPath].'status.availabilityState'.description
-            $ObjTempMember.Enabled = $MemberStatsDict[$PoolMember.fullPath].'status.enabledState'.description
-            $ObjTempMember.currentconnections = $MemberStatsDict[$PoolMember.fullPath].'serverside.curConns'.value
-            $ObjTempMember.maximumconnections = $MemberStatsDict[$PoolMember.fullPath].'serverside.maxConns'.value
+                #$ObjTempPool.name + "|" + $PoolMember.fullPath + "|" + $MemberStatsDict[$PoolMember.fullPath].'status.availabilityState'.description
+                if (Get-Member -inputobject $MemberStatsDict[$PoolMember.fullPath] -name 'status.availabilityState.description') {
+                    $ObjTempMember.Availability = $MemberStatsDict[$PoolMember.fullPath].'status.availabilityState'.description
+                } else {
+                    $ObjTempMember.Availability = ""
+                }
+                $ObjTempMember.Enabled = $MemberStatsDict[$PoolMember.fullPath].'status.enabledState'.description
+                $ObjTempMember.currentconnections = $MemberStatsDict[$PoolMember.fullPath].'serverside.curConns'.value
+                $ObjTempMember.maximumconnections = $MemberStatsDict[$PoolMember.fullPath].'serverside.maxConns'.value
 
-            $ObjTempPool.members += $ObjTempMember
+                $ObjTempPool.members += $ObjTempMember
+            }
         }
         $LoadBalancerObjects.Pools.add($ObjTempPool.name, $ObjTempPool)
     }
@@ -1146,7 +1190,7 @@ function Get-LTMInformation {
     $LoadBalancerObjects.DataGroups = c@{}
     $Pools = $LoadBalancerObjects.Pools.Keys | Sort-Object -Unique
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/internal?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/internal?`$filter=partition"
     $DataGroups = $Response.items
 
     Foreach($DataGroup in $DataGroups){
@@ -1160,20 +1204,25 @@ function Get-LTMInformation {
         $Dgdata = New-Object System.Collections.Hashtable
         $TempPools = @()
 
-        Foreach($Record in $DataGroup.records){
-            $DgData.Add($Record.name, $Record.data)
+        if (Get-Member -inputobject $DataGroup -name 'records') {
+            Foreach($Record in $DataGroup.records){
+                if (Get-Member -inputobject $Record -name 'data') {
+                    $DgData.Add($Record.name, $Record.data)
+                } else {
+                    $DgData.Add($Record.name, "")
+                    continue
+                }
 
-            if (!$Record.data) {continue}
+                # if data contains pool names, add to .pools and change type to Pools
+                if($record.data.contains("/")){
+                    $TempPool = $Record.data
+                } else {
+                    $TempPool = "/$Partition/" + $Record.data
+                }
 
-            # if data contains pool names, add to .pools and change type to Pools
-            if($record.data.contains("/")){
-                $TempPool = $Record.data
-            } else {
-                $TempPool = "/$Partition/" + $Record.data
-            }
-
-            if ($Pools -contains $TempPool) {
-                $TempPools += $TempPool
+                if ($Pools -contains $TempPool) {
+                    $TempPools += $TempPool
+                }
             }
         }
 
@@ -1187,17 +1236,18 @@ function Get-LTMInformation {
         $LoadBalancerObjects.DataGroups.add($ObjTempDataGroup.name, $ObjTempDataGroup)
     }
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/external?`$filter=partition"
-    $DataGroups = $Response.items
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/external?`$filter=partition"
 
-    Foreach($DataGroup in $DataGroups){
+    if (Get-Member -inputobject $Response -name 'items') {
+        Foreach($DataGroup in $Response.items){
 
-        $ObjTempDataGroup = New-Object -Type DataGroup
-        $ObjTempDataGroup.name = $DataGroup.fullPath
-        $ObjTempDataGroup.type = $DataGroup.type
-        $ObjTempDataGroup.loadbalancer = $LoadBalancerName
+            $ObjTempDataGroup = New-Object -Type DataGroup
+            $ObjTempDataGroup.name = $DataGroup.fullPath
+            $ObjTempDataGroup.type = $DataGroup.type
+            $ObjTempDataGroup.loadbalancer = $LoadBalancerName
 
-        $LoadBalancerObjects.DataGroups.add($ObjTempDataGroup.name, $ObjTempDataGroup)
+            $LoadBalancerObjects.DataGroups.add($ObjTempDataGroup.name, $ObjTempDataGroup)
+        }
     }
 
     #EndRegion
@@ -1210,7 +1260,7 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.iRules = c@{}
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/rule?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/rule?`$filter=partition"
     $iRules = $Response.items
 
     $LastPartition = ''
@@ -1250,15 +1300,17 @@ function Get-LTMInformation {
 
     log verbose "Caching profiles from $LoadBalancerName"
 
-    $ProfileLinks = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile?`$filter=partition"
+    $ProfileLinks = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile?`$filter=partition"
 
     $ProfileDict = c@{}
 
     Foreach($ProfileLink in $ProfileLinks.items.reference.link){
         $ProfileType = $ProfileLink.split("/")[7].split("?")[0]
-        $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile/${ProfileType}?`$filter=partition"
-        Foreach($Profile in $Response.items){
-            $ProfileDict.add($Profile.fullPath, $Profile)
+        $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile/${ProfileType}?`$filter=partition"
+        if (Get-Member -inputobject $Response -name 'items') {
+            Foreach($Profile in $Response.items){
+                $ProfileDict.add($Profile.fullPath, $Profile)
+            }
         }
     }
 
@@ -1266,7 +1318,7 @@ function Get-LTMInformation {
 
     #Region Cache virtual address information
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual-address?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual-address?`$filter=partition"
     $VirtualAddresses = $Response.items
 
     $TrafficGroupDict = c@{}
@@ -1283,11 +1335,11 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.VirtualServers = c@{}
 
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual?`$filter=partition&expandSubcollections=true"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual?`$filter=partition&expandSubcollections=true"
     [array]$VirtualServers = $Response.items
 
     $VirtualStatsDict = c@{}
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual/stats?`$filter=partition"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual/stats?`$filter=partition"
     Foreach($VirtualStat in $Response.entries.psobject.properties) {
         $VirtualStatsDict.add($VirtualStat.Value.nestedStats.entries.tmName.description, $VirtualStat.Value.nestedStats.entries)
     }
@@ -1297,15 +1349,19 @@ function Get-LTMInformation {
 
         $ObjTempVirtualServer.loadbalancer = $LoadBalancerName
         $ObjTempVirtualServer.name = $VirtualServer.fullPath
-        $ObjTempVirtualServer.description = $VirtualServer.description
-        $ObjTempVirtualServer.ip = $VirtualServer.destination.split("/:")[2]
+        if (Get-Member -inputobject $VirtualServer -name 'description') {
+            $ObjTempVirtualServer.description = $VirtualServer.description
+        }
+        $ObjTempVirtualServer.ip = ($VirtualServer.destination -split "[/:]")[2]
         $ObjTempVirtualServer.port = $VirtualServer.destination.split(":")[1]
 
         if(($ObjTempVirtualServer.port) -eq 0){
             $ObjTempVirtualServer.port = "Any"
         }
 
-        $ObjTempVirtualServer.defaultpool = $VirtualServer.pool
+        if (Get-Member -inputobject $VirtualServer -name 'pool') {
+            $ObjTempVirtualServer.defaultpool = $VirtualServer.pool
+        }
 
         #Set the ssl profile to None by default, then check if there's an SSL profile and
 
@@ -1351,30 +1407,31 @@ function Get-LTMInformation {
 
         #Get the iRules of the Virtual server
         $ObjTempVirtualServer.irules = @();
-        Foreach ($rule in $VirtualServer.rules){
-            $ObjTempVirtualServer.irules += $rule
+        if (Get-Member -inputobject $VirtualServer -name 'rule') {
+            Foreach ($rule in $VirtualServer.rules){
+                $ObjTempVirtualServer.irules += $rule
 
-            $iRule = $LoadBalancerObjects.iRules[$rule]
-            if($iRule){
-                $iRule.virtualservers += $ObjTempVirtualServer.name
-                if($iRule.pools.Count -gt 0){
-                    $ObjTempVirtualServer.pools += [array]$iRule.pools
-                }
-                Foreach($DatagroupName in $iRule.datagroups ) {
-                    $Datagroup = $LoadBalancerObjects.DataGroups[$DatagroupName]
-                    if ($Datagroup -and $Datagroup.pools.Count -gt 0) {
-                        $ObjTempVirtualServer.pools += [array]$Datagroup.pools
+                $iRule = $LoadBalancerObjects.iRules[$rule]
+                if($iRule){
+                    $iRule.virtualservers += $ObjTempVirtualServer.name
+                    if($iRule.pools.Count -gt 0){
+                        $ObjTempVirtualServer.pools += [array]$iRule.pools
                     }
+                    Foreach($DatagroupName in $iRule.datagroups ) {
+                        $Datagroup = $LoadBalancerObjects.DataGroups[$DatagroupName]
+                        if ($Datagroup -and $Datagroup.pools.Count -gt 0) {
+                            $ObjTempVirtualServer.pools += [array]$Datagroup.pools
+                        }
+                    }
+                } else {
+                    log error "iRule $rule not found (zero length?) for ${ObjTempVirtualServer.name} on $LoadBalancerName"
                 }
-            } else {
-                log error "iRule $rule not found (zero length?) for ${ObjTempVirtualServer.name} on $LoadBalancerName"
             }
         }
 
-
         #Get the persistence profile of the Virtual server
 
-        if($null -ne $VirtualServer.persist){
+        if (Get-Member -inputobject $VirtualServer -name 'persist') {
             $ObjTempVirtualServer.persistence += "/" + $VirtualServer.persist.partition + "/" + $VirtualServer.persist.name
             if("" -ne $VirtualServer.fallbackPersistence){
                 $ObjTempVirtualServer.persistence += $VirtualServer.fallbackPersistence
@@ -1403,14 +1460,14 @@ function Get-LTMInformation {
             $ObjTempVirtualServer.irules = @();
         }
 
-        if($VirtualServer.vlansDisabled -and $VirtualServer.vlans.count -eq 0){
+        if(Get-Member -inputobject $VirtualServer -name 'vlans'){
+            $ObjTempVirtualServer.vlans = $VirtualServer.vlans
+        }
+
+        if(Get-Member -inputobject $VirtualServer -name 'vlansEnabled'){
             $ObjTempVirtualServer.vlanstate = "enabled"
-        } elseif ($VirtualServer.vlansDisabled) {
+        } elseif(Get-Member -inputobject $VirtualServer -name 'vlansDisabled'){
             $ObjTempVirtualServer.vlanstate = "disabled"
-            $ObjTempVirtualServer.vlans = $VirtualServer.vlans
-        } elseif ($VirtualServer.vlansEnabled) {
-            $ObjTempVirtualServer.vlanstate = "enabled"
-            $ObjTempVirtualServer.vlans = $VirtualServer.vlans
         }
 
         $VirtualServerSASMPolicies = $LoadBalancerObjects.ASMPolicies.values | Where-Object { $_.virtualServers -contains $ObjTempVirtualServer.name }
@@ -1515,7 +1572,7 @@ function GetDeviceInfo {
     $ObjLoadBalancer.isonlydevice = $IsOnlyDevice
 
     $BigIPHostname = ""
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/global-settings"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/global-settings"
     $BigIPHostname = $Response.hostname
 
     log verbose "Hostname is $BigipHostname for $Device"
@@ -1523,7 +1580,7 @@ function GetDeviceInfo {
     $ObjLoadBalancer.name = $BigIPHostname
 
     #Get information about ip, name, model and category
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/hardware"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/hardware"
     $Platform = $Response.entries.'https://localhost/mgmt/tm/sys/hardware/platform'.nestedStats.entries
     $systemInfo = $Response.entries.'https://localhost/mgmt/tm/sys/hardware/system-info'.nestedStats.entries
 
@@ -1561,7 +1618,7 @@ function GetDeviceInfo {
     log verbose "Fetching information about $BigIPHostname"
 
     #Get the version information
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/version"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/version"
 
     $ObjLoadBalancer.version = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Version.description
     $ObjLoadBalancer.build = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Build.description
@@ -1569,13 +1626,13 @@ function GetDeviceInfo {
     $ObjLoadBalancer.baseBuild = "unknown"
 
     #Get failover status to determine if the load balancer is active
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/cm/failover-status"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$Device/mgmt/tm/cm/failover-status"
 
-    $ObjLoadBalancer.active = $Response.entries.psobject.Properties.value.nestedStats.entries.status.description -eq "ACTIVE"
-    $ObjLoadBalancer.color = $Response.entries.psobject.Properties.value.nestedStats.entries.color.description
+    $ObjLoadBalancer.active = $Response.entries.'https://localhost/mgmt/tm/cm/failover-status/0'.nestedStats.entries.status.description -eq "ACTIVE"
+    $ObjLoadBalancer.color = $Response.entries.'https://localhost/mgmt/tm/cm/failover-status/0'.nestedStats.entries.color.description
 
     #Get provisioned modules
-    $Response = Invoke-RestMethod -Method "GET" -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/provision"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/provision"
 
     $ModuleDict = c@{}
 
@@ -1603,7 +1660,7 @@ function GetDeviceInfo {
     $Global:ReportObjects.add($ObjLoadBalancer.ip, $LoadBalancerObjects)
 
     #Don't continue if this loadbalancer is not active
-    If($ObjLoadBalancer.active -or $ObjLoadBalancer.isonlydevice){
+    If($true -or $ObjLoadBalancer.active -or $ObjLoadBalancer.isonlydevice){
         log verbose "Caching LTM information from $BigIPHostname"
         Get-LTMInformation -headers $Headers -LoadBalancer $LoadBalancerObjects
         # Record some stats
@@ -1627,7 +1684,7 @@ function GetDeviceInfo {
 #Region Call Cache LTM information
 $jobs = @()
 Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup) {
-    $IsOnlyDevice = $DeviceGroup.Device.Count -eq 1
+    $IsOnlyDevice = @($DeviceGroup.Device).Count -eq 1
     $StatusVIP = $DeviceGroup.StatusVip
 
     $ObjDeviceGroup = New-Object -TypeName "DeviceGroup"
@@ -1667,8 +1724,8 @@ do {
             $lines=Receive-Job -Job $job
             Foreach($line in $lines) {
                 try {
-                    #$obj=ConvertFrom-Json -AsHashTable $line
-                    $obj=ConvertFrom-Json $line
+                    $obj=ConvertFrom-Json -AsHashTable $line
+                    #$obj=ConvertFrom-Json $line
                     # process contents of $obj, if log, add to global log and echo to screen, else store results.
                     if($obj.datetime -and $obj.severity -and $obj.message) {
                         log $obj.severity ($job.name+':'+$obj.message) $obj.datetime
@@ -2036,7 +2093,6 @@ $Global:Preferences['showAdcLinks'] = ($Global:Bigipreportconfig.Settings.showAd
 $StatsMsg = "Stats:"
 $StatsMsg += " G:" + $Global:DeviceGroups.Count
 $StatsMsg += " LB:" + $Global:ReportObjects.Values.LoadBalancer.Count
-
 $StatsMsg += " VS:" + $Global:Out.VirtualServers.Length
 $StatsMsg += " P:" + $Global:Out.Pools.Length
 $StatsMsg += " R:" + $Global:Out.iRules.Length
