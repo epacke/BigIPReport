@@ -594,7 +594,7 @@ function pollCurrentView() {
 function renderLoadBalancer(loadbalancer, type) {
     var balancer;
     if (siteData.preferences.HideLoadBalancerFQDN) {
-        balancer = loadbalancer.split('.')[0]
+        balancer = loadbalancer.split('.')[0];
     } else {
         balancer = loadbalancer;
     }
