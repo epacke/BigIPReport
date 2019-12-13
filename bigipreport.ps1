@@ -273,7 +273,9 @@ Set-StrictMode -Version Latest
 if ($null -eq $PollLoadBalancer) {
     $ErrorActionPreference = "Stop"
 } else {
+    # children
     $ErrorActionPreference = "Stop"
+    $ProgressPreference = "SilentlyContinue"
 }
 # PowerShell does not inherit PWD in pre v7
 if ($null -ne $Location) {
