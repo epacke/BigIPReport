@@ -917,25 +917,25 @@ function Get-LTMInformation {
     #Check if ASM is enabled
     if($LoadBalancerObjects.LoadBalancer.modules["asm"]){
 
-        Try {
-            log verbose "Getting ASM Policy information from $LoadBalancerName"
-
+        log verbose "Getting ASM Policy information from $LoadBalancerName"
+        try {
             $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/asm/policies"
-            $Policies = $Response.items
-
-            Foreach($Policy in $Policies){
-                $ObjTempPolicy = New-Object -Type ASMPolicy
-
-                $ObjTempPolicy.name = $Policy.fullPath
-                $ObjTempPolicy.enforcementMode = $Policy.enforcementMode
-                $ObjTempPolicy.learningMode = $Policy.learningMode
-                $ObjTempPolicy.virtualServers = $Policy.virtualServers
-                $ObjTempPolicy.loadbalancer = $LoadBalancerName
-
-                $LoadBalancerObjects.ASMPolicies.add($ObjTempPolicy.name, $ObjTempPolicy)
-            }
         } Catch {
             log error "Unable to load ASM policies from $LoadBalancerName."
+        }
+
+        Foreach($Policy in $Response.items){
+            $ObjTempPolicy = New-Object -Type ASMPolicy
+
+            $ObjTempPolicy.name = $Policy.fullPath
+            $ObjTempPolicy.enforcementMode = $Policy.enforcementMode
+            if (Get-Member -inputobject $Policy -name 'learningMode') {
+                $ObjTempPolicy.learningMode = $Policy.learningMode
+            }
+            $ObjTempPolicy.virtualServers = $Policy.virtualServers
+            $ObjTempPolicy.loadbalancer = $LoadBalancerName
+
+            $LoadBalancerObjects.ASMPolicies.add($ObjTempPolicy.name, $ObjTempPolicy)
         }
     }
 
@@ -1279,7 +1279,9 @@ function Get-LTMInformation {
         $ObjiRule = New-Object iRule
 
         $ObjiRule.name = $iRule.fullPath
-        $ObjiRule.definition = $iRule.apiAnonymous
+        if (Get-Member -inputobject $iRule -name "apiAnonymous") {
+            $ObjiRule.definition = $iRule.apiAnonymous
+        }
         $ObjiRule.loadbalancer = $LoadBalancerName
 
         $Partition = $iRule.partition
