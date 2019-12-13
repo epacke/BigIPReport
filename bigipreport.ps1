@@ -1285,6 +1285,8 @@ function Get-LTMInformation {
         $ObjiRule.name = $iRule.fullPath
         if (Get-Member -inputobject $iRule -name "apiAnonymous") {
             $ObjiRule.definition = $iRule.apiAnonymous
+        } else {
+            $ObjiRule.definition = ""
         }
         $ObjiRule.loadbalancer = $LoadBalancerName
 
