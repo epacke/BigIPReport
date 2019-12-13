@@ -1742,22 +1742,26 @@ do {
         if ($job.HasMoreData) {
             $lines=Receive-Job -Job $job
             Foreach($line in $lines) {
-                $obj=ConvertFrom-Json -AsHashTable $line
-                #$obj=ConvertFrom-Json $line
-                # process contents of $obj, if log, add to global log and echo to screen, else store results.
-                if ($obj["datetime"]) {
-                    log $obj.severity ($job.name+':'+$obj.message) $obj.datetime
-                } elseif ($obj["LoadBalancer"]) {
-                    $Global:ReportObjects.add($obj.LoadBalancer.ip, $obj)
-                    Foreach ($thing in ("ASMPolicies","Certificates","DataGroups","iRules","Monitors","Pools","VirtualServers")) {
-                        if ($obj[$thing]) {
-                            Foreach($object in $obj.$thing.Values) {
-                                $Global:Out.$thing += $object
+                try {
+                    $obj=ConvertFrom-Json -AsHashTable $line
+                    #$obj=ConvertFrom-Json $line
+                    # process contents of $obj, if log, add to global log and echo to screen, else store results.
+                    if ($obj["datetime"]) {
+                        log $obj.severity ($job.name+':'+$obj.message) $obj.datetime
+                    } elseif ($obj["LoadBalancer"]) {
+                        $Global:ReportObjects.add($obj.LoadBalancer.ip, $obj)
+                        Foreach ($thing in ("ASMPolicies","Certificates","DataGroups","iRules","Monitors","Pools","VirtualServers")) {
+                            if ($obj[$thing]) {
+                                Foreach($object in $obj.$thing.Values) {
+                                    $Global:Out.$thing += $object
+                                }
                             }
                         }
+                    } else {
+                        log error ($job.name+':Unmatched:'+$line)
                     }
-                } else {
-                    log verbose "Unmatched:$line"
+                } catch {
+                    log error ($job.name+':Unparsed:'+$line)
                 }
             }
         }
