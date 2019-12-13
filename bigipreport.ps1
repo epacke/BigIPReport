@@ -403,7 +403,7 @@ log verbose "Starting: PSCommandPath=$PSCommandPath ConfigurationFile=$Configura
 ################################################################################################################################################
 Function Send-Errors {
     #Check for errors when executing the script and send them
-    If($Error.Count -gt 0 -or ($Global:LoggedErrors | Where-Object {$_.severity -eq "ERROR"}).Count -gt 0){
+    If($Error.Count -gt 0 -or @($Global:LoggedErrors | Where-Object {$_.severity -eq "ERROR"}).Count -gt 0){
         log verbose "There were errors while generating the report"
 
         if($Global:Bigipreportconfig.Settings.ErrorReporting.Enabled -eq $true){
@@ -949,7 +949,7 @@ function Get-LTMInformation {
 
     $Response = ""
     try {
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert?`$filter=partition"
+        $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert?`$filter=partition"
     } catch {
         log error "Error loading certificates from $LoadBalancerIP"
     }
@@ -1751,8 +1751,8 @@ do {
                     $Global:ReportObjects.add($obj.LoadBalancer.ip, $obj)
                     Foreach ($thing in ("ASMPolicies","Certificates","DataGroups","iRules","Monitors","Pools","VirtualServers")) {
                         if ($obj[$thing]) {
-                            Foreach($object in $obj.$thing.psobject.Properties) {
-                                $Global:Out.$thing += $object.Value
+                            Foreach($object in $obj.$thing.Values) {
+                                $Global:Out.$thing += $object
                             }
                         }
                     }
