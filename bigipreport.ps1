@@ -948,49 +948,57 @@ function Get-LTMInformation {
     $LoadBalancerObjects.Certificates = c@{}
 
     $Response = ""
+    try {
     $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert?`$filter=partition"
-    $Certificates = $Response.items
+    } catch {
+        log error "Error loading certificates from $LoadBalancerIP"
+    }
 
     $unixEpochStart = new-object DateTime 1970,1,1,0,0,0,([DateTimeKind]::Utc)
-    Foreach($Certificate in $Certificates){
-        $ObjSubject = New-Object -TypeName "CertificateDetails"
 
-        if (Get-Member -inputobject $Certificate -name "commonName") {
-            $ObjSubject.commonName = $Certificate.commonName
-        }
-        if (Get-Member -inputobject $Certificate -name "country") {
-            $ObjSubject.countryName = $Certificate.country
-        }
-        if (Get-Member -inputobject $Certificate -name "state") {
-            $ObjSubject.stateName = $Certificate.state
-        }
-        if (Get-Member -inputobject $Certificate -name "city") {
-            $ObjSubject.localityName = $Certificate.city
-        }
-        $ObjSubject.organizationName = $Certificate.organization
-        if (Get-Member -inputobject $Certificate -name "ou") {
-            $ObjSubject.divisionName = $Certificate.ou
-        }
+    if (Get-Member -InputObject $Response -Name 'items') {
+        Foreach($Certificate in $Response.items){
+            $ObjSubject = New-Object -TypeName "CertificateDetails"
 
-        $ObjCertificate = New-Object -TypeName "Certificate"
+            if (Get-Member -inputobject $Certificate -name "commonName") {
+                $ObjSubject.commonName = $Certificate.commonName
+            }
+            if (Get-Member -inputobject $Certificate -name "country") {
+                $ObjSubject.countryName = $Certificate.country
+            }
+            if (Get-Member -inputobject $Certificate -name "state") {
+                $ObjSubject.stateName = $Certificate.state
+            }
+            if (Get-Member -inputobject $Certificate -name "city") {
+                $ObjSubject.localityName = $Certificate.city
+            }
+            if (Get-Member -inputobject $Certificate -name "ou") {
+                $ObjSubject.organizationName = $Certificate.organization
+            }
+            if (Get-Member -inputobject $Certificate -name "ou") {
+                $ObjSubject.divisionName = $Certificate.ou
+            }
 
-        $ObjCertificate.fileName = $Certificate.fullPath
-        $expiration = [datetime]::ParseExact($Certificate.apiRawValues.expiration.Replace(" GMT","").Replace("  "," "),"MMM d H:mm:ss yyyy",$null)
-        $ObjCertificate.expirationDate = ($expiration - $unixEpochStart).TotalSeconds
-        $ObjCertificate.subject = $ObjSubject
-        if (Get-Member -inputobject $Certificate -name "subjectAlternativeName") {
-            $ObjCertificate.subjectAlternativeName = $Certificate.subjectAlternativeName
-        } else {
-            $ObjCertificate.subjectAlternativeName = ""
-        }
-        if (Get-Member -inputobject $Certificate -name "issuer") {
-            $ObjCertificate.issuer = $Certificate.issuer
-        } else {
-            $ObjCertificate.issuer = ""
-        }
-        $ObjCertificate.loadbalancer = $LoadBalancerName
+            $ObjCertificate = New-Object -TypeName "Certificate"
 
-        $LoadBalancerObjects.Certificates.add($ObjCertificate.fileName, $ObjCertificate)
+            $ObjCertificate.fileName = $Certificate.fullPath
+            $expiration = [datetime]::ParseExact($Certificate.apiRawValues.expiration.Replace(" GMT","").Replace("  "," "),"MMM d H:mm:ss yyyy",$null)
+            $ObjCertificate.expirationDate = ($expiration - $unixEpochStart).TotalSeconds
+            $ObjCertificate.subject = $ObjSubject
+            if (Get-Member -inputobject $Certificate -name "subjectAlternativeName") {
+                $ObjCertificate.subjectAlternativeName = $Certificate.subjectAlternativeName
+            } else {
+                $ObjCertificate.subjectAlternativeName = ""
+            }
+            if (Get-Member -inputobject $Certificate -name "issuer") {
+                $ObjCertificate.issuer = $Certificate.issuer
+            } else {
+                $ObjCertificate.issuer = ""
+            }
+            $ObjCertificate.loadbalancer = $LoadBalancerName
+
+            $LoadBalancerObjects.Certificates.add($ObjCertificate.fileName, $ObjCertificate)
+        }
     }
 
     #EndRegion
@@ -1736,8 +1744,10 @@ do {
                 } elseif ($obj["LoadBalancer"]) {
                     $Global:ReportObjects.add($obj.LoadBalancer.ip, $obj)
                     Foreach ($thing in ("ASMPolicies","Certificates","DataGroups","iRules","Monitors","Pools","VirtualServers")) {
-                        Foreach($object in $obj.$thing.psobject.Properties) {
-                            $Global:Out.$thing += $object.Value
+                        if ($obj[$thing]) {
+                            Foreach($object in $obj.$thing.psobject.Properties) {
+                                $Global:Out.$thing += $object.Value
+                            }
                         }
                     }
                 } else {
