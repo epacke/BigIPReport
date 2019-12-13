@@ -1179,9 +1179,9 @@ function Get-LTMInformation {
                     $ObjTempMember.Status = $PoolMember.state
 
                     #$ObjTempPool.name + "|" + $PoolMember.fullPath + "|" + $MemberStatsDict[$PoolMember.fullPath].'status.availabilityState'.description
-                    if (Get-Member -inputobject $MemberStatsDict[$PoolMember.fullPath] -name 'status.availabilityState.description') {
+                    try {
                         $ObjTempMember.Availability = $MemberStatsDict[$PoolMember.fullPath].'status.availabilityState'.description
-                    } else {
+                    } catch {
                         $ObjTempMember.Availability = ""
                     }
                     $ObjTempMember.Enabled = $MemberStatsDict[$PoolMember.fullPath].'status.enabledState'.description
