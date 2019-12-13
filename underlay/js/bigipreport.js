@@ -364,11 +364,10 @@ function renderPoolMember(loadbalancer, member, type) {
             result += '</span>';
         }
         name = member.name.split('/')[2];
-        result += name
-        if (name != member.ip) {
+        if (name != member.ip + ':' + member.port) {
             result += '(' + member.ip + ')';
         }
-        result += ':' + member.port;
+        result += name
     }
     return result;
 }
