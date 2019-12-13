@@ -1049,7 +1049,11 @@ function Get-LTMInformation {
         $ObjTempMonitor = New-Object Monitor
 
         $ObjTempMonitor.name = $HttpMonitor.name
-        $ObjTempMonitor.sendstring = $HttpMonitor.send
+        if (Get-Member -inputobject $HttpMonitor -name "send") {
+            $ObjTempMonitor.sendstring = $HttpMonitor.send
+        } else {
+            $ObjTempMonitor.sendstring = ""
+        }
         if (Get-Member -inputobject $HttpMonitor -name "recv") {
             $ObjTempMonitor.receivestring = $HttpMonitor.recv
         } else {
