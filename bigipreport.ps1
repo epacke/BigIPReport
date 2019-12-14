@@ -1471,10 +1471,13 @@ function Get-LTMInformation {
 
         Try{
             $ObjTempVirtualServer.sourcexlatetype = $VirtualServer.sourceAddressTranslation.type
-            $ObjTempVirtualServer.sourcexlatepool = $VirtualServer.sourceAddressTranslation.pool
         } Catch {
             $ObjTempVirtualServer.sourcexlatetype = "OLDVERSION"
-            $ObjTempVirtualServer.sourcexlatepool = "OLDVERSION"
+        }
+        Try{
+            $ObjTempVirtualServer.sourcexlatepool = $VirtualServer.sourceAddressTranslation.pool
+        } Catch {
+            $ObjTempVirtualServer.sourcexlatepool = ""
         }
 
 
