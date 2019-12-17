@@ -984,11 +984,11 @@ function Get-LTMInformation {
             $ObjCertificate = New-Object -TypeName "Certificate"
 
             $ObjCertificate.fileName = $Certificate.fullPath
-            $expiration = [datetime]::ParseExact($Certificate.apiRawValues.expiration.Replace(" GMT","").Replace("  "," "),"MMM d H:mm:ss yyyy",$null)
+            $expiration = [datetime]::ParseExact($Certificate.apiRawValues.expiration.Replace(' GMT','').Replace("  "," "),"MMM d H:mm:ss yyyy",$null)
             $ObjCertificate.expirationDate = ($expiration - $unixEpochStart).TotalSeconds
             $ObjCertificate.subject = $ObjSubject
             if (Get-Member -inputobject $Certificate -name "subjectAlternativeName") {
-                $ObjCertificate.subjectAlternativeName = $Certificate.subjectAlternativeName
+                $ObjCertificate.subjectAlternativeName = $Certificate.subjectAlternativeName.replace('DNS:','')
             } else {
                 $ObjCertificate.subjectAlternativeName = ""
             }
@@ -1108,7 +1108,7 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.Pools = c@{}
 
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?`$expandSubcollections=true"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?expandSubcollections=true"
     [array]$Pools = $Response.items
 
     $PoolStatsDict = c@{}
