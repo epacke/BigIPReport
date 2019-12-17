@@ -1741,11 +1741,10 @@ $Global:Out.Pools=@()
 $Global:Out.VirtualServers=@()
 
 do {
+    $completed=0
     $remaining=0
+    $failed=0
     foreach($job in $jobs){
-        if ($job.State -ne "Completed") {
-            $remaining++
-        }
         if ($job.HasMoreData) {
             $lines=Receive-Job -Job $job
             Foreach($line in $lines) {
@@ -1772,8 +1771,15 @@ do {
                 }
             }
         }
+        if ($job.State -eq "Completed") {
+            $completed++
+        } elseif ($job.State -eq "Failed") {
+            $failed++
+        } else {
+            $remaining++
+        }
     }
-    Write-Host -NoNewLine "Remaining: $remaining `r"
+    Write-Host -NoNewLine "Completed: $completed, Failed: $failed, Remaining: $remaining   `r"
     Start-Sleep 1
 } until ($remaining -eq 0)
 # remove completed jobs
