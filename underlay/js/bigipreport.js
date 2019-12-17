@@ -1826,6 +1826,7 @@ function setupCertificateTable() {
                 <th class="loadbalancerHeaderCell"><span style="display: none;">Load Balancer</span><input type="search" class="search" placeholder="Load Balancer" /></th>
                 <th><span style="display: none;">Name</span><input type="search" class="search" placeholder="Name" /></th>
                 <th><span style="display: none;">Common Name</span><input type="search" class="search" placeholder="Common Name" /></th>
+                <th><span style="display: none;">SAN</span><input type="search" class="search" placeholder="SAN" /></th>
                 <th><span style="display: none;">Country</span><input type="search" class="search" placeholder="Country Name" /></th>
                 <th><span style="display: none;">State</span><input type="search" class="search" placeholder="State Name" /></th>
                 <th><span style="display: none;">Org</span><input type="search" class="search" placeholder="Organization Name" /></th>
@@ -1855,6 +1856,9 @@ function setupCertificateTable() {
             }
         }, {
             "data": "subject.commonName"
+        }, {
+            "data": "subjectAlternativeName",
+            "visible": false
         }, {
             "data": "subject.countryName",
             "class": "certificatecountryname",
