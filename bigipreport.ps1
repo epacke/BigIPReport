@@ -1108,7 +1108,7 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.Pools = c@{}
 
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?`$filter=partition&expandSubcollections=true"
+    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?`$expandSubcollections=true"
     [array]$Pools = $Response.items
 
     $PoolStatsDict = c@{}
