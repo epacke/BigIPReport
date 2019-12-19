@@ -930,7 +930,9 @@ function Get-LTMInformation {
             $ObjTempPolicy = New-Object -Type ASMPolicy
 
             $ObjTempPolicy.name = $Policy.fullPath
-            $ObjTempPolicy.enforcementMode = $Policy.enforcementMode
+            if (Get-Member -inputobject $Policy -name 'enforcementMode') {
+                $ObjTempPolicy.enforcementMode = $Policy.enforcementMode
+            }
             if (Get-Member -inputobject $Policy -name 'learningMode') {
                 $ObjTempPolicy.learningMode = $Policy.learningMode
             }
