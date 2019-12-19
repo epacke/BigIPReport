@@ -1566,10 +1566,19 @@ Function Get-AuthToken {
     #Convert the body to Json
     $Body = $Body | ConvertTo-Json
 
+    # REST login sometimes works, and sometimes does not. Try 3 times in case it's flakey
     try {
         $Response  = Invoke-RestMethod -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
     } catch {
-        return $null
+        try {
+            $Response  = Invoke-RestMethod -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
+        } catch {
+            try {
+                $Response  = Invoke-RestMethod -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
+            } catch {
+                return $null
+            }
+        }
     }
 
     return $Response.token.token
