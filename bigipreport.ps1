@@ -1357,168 +1357,172 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.VirtualServers = c@{}
 
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual?expandSubcollections=true"
-    [array]$VirtualServers = $Response.items
+    $Response = ""
+    try {
+        $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual?expandSubcollections=true"
+        [array]$VirtualServers = $Response.items
 
-    $VirtualStatsDict = c@{}
-    $Response = Invoke-WebRequest -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual/stats" |
-        ConvertFrom-Json -AsHashtable
-    Foreach($VirtualStat in $Response.entries.Values) {
-        $VirtualStatsDict.add($VirtualStat.nestedStats.entries.tmName.description, $VirtualStat.nestedStats.entries)
-    }
-
-    Foreach($VirtualServer in $VirtualServers){
-        $ObjTempVirtualServer = New-Object VirtualServer
-
-        $ObjTempVirtualServer.loadbalancer = $LoadBalancerName
-        $ObjTempVirtualServer.name = $VirtualServer.fullPath
-        if (Get-Member -inputobject $VirtualServer -name 'description') {
-            $ObjTempVirtualServer.description = $VirtualServer.description
-        }
-        $ObjTempVirtualServer.ip = ($VirtualServer.destination -split "[/:]")[2]
-        $ObjTempVirtualServer.port = $VirtualServer.destination.split(":")[1]
-
-        if(($ObjTempVirtualServer.port) -eq 0){
-            $ObjTempVirtualServer.port = "Any"
+        $VirtualStatsDict = c@{}
+        $Response = Invoke-WebRequest -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual/stats" |
+            ConvertFrom-Json -AsHashtable
+        Foreach($VirtualStat in $Response.entries.Values) {
+            $VirtualStatsDict.add($VirtualStat.nestedStats.entries.tmName.description, $VirtualStat.nestedStats.entries)
         }
 
-        if (Get-Member -inputobject $VirtualServer -name 'pool') {
-            $ObjTempVirtualServer.defaultpool = $VirtualServer.pool
-        }
+        Foreach($VirtualServer in $VirtualServers){
+            $ObjTempVirtualServer = New-Object VirtualServer
 
-        #Set the ssl profile to None by default, then check if there's an SSL profile and
-
-        $ObjTempVirtualServer.httpprofile = "None";
-        $ObjTempVirtualServer.compressionprofile = "None";
-        $ObjTempVirtualServer.profiletype = "Standard";
-
-        Foreach($Profile in $VirtualServer.profilesReference.items){
-            if ($ProfileDict[$Profile.fullPath]) {
-                switch ($ProfileDict[$Profile.fullPath].kind) {
-                    "tm:ltm:profile:udp:udpstate"{
-                        $ObjTempVirtualServer.profiletype = "UDP"
-                    }
-                    "tm:ltm:profile:http-compression:http-compressionstate" {
-                        $ObjTempVirtualServer.compressionprofile = $Profile.fullPath
-                    }
-                    "tm:ltm:profile:client-ssl:client-sslstate" {
-                        $ObjTempVirtualServer.sslprofileclient += $Profile.fullPath
-                    }
-                    "tm:ltm:profile:server-ssl:server-sslstate" {
-                        $ObjTempVirtualServer.sslprofileserver += $Profile.fullPath
-                    }
-                    "tm:ltm:profile:fastl4:fastl4state" {
-                        $ObjTempVirtualServer.profiletype = "Fast L4"
-                    }
-                    "tm:ltm:profile:fasthttp:fasthttpstate" {
-                        $ObjTempVirtualServer.profiletype = "Fast HTTP"
-                    }
-                    "tm:ltm:profile:http:httpstate" {
-                        $ObjTempVirtualServer.httpprofile = $Profile.fullPath
-                    }
-                    default {
-                        #$ProfileDict[$Profile.fullPath].kind + "|" + $Profile.fullPath
-                    }
-                }
+            $ObjTempVirtualServer.loadbalancer = $LoadBalancerName
+            $ObjTempVirtualServer.name = $VirtualServer.fullPath
+            if (Get-Member -inputobject $VirtualServer -name 'description') {
+                $ObjTempVirtualServer.description = $VirtualServer.description
             }
-        }
+            $ObjTempVirtualServer.ip = ($VirtualServer.destination -split "[/:]")[2]
+            $ObjTempVirtualServer.port = $VirtualServer.destination.split(":")[1]
 
-        if ($null -eq $ObjTempVirtualServer.sslprofileclient) {
-            $ObjTempVirtualServer.sslprofileclient += "None";
-        }
-        if ($null -eq $ObjTempVirtualServer.sslprofileserver) {
-            $ObjTempVirtualServer.sslprofileserver += "None";
-        }
+            if(($ObjTempVirtualServer.port) -eq 0){
+                $ObjTempVirtualServer.port = "Any"
+            }
 
-        #Get the iRules of the Virtual server
-        $ObjTempVirtualServer.irules = @();
-        if (Get-Member -inputobject $VirtualServer -name 'rule') {
-            Foreach ($rule in $VirtualServer.rules){
-                $ObjTempVirtualServer.irules += $rule
+            if (Get-Member -inputobject $VirtualServer -name 'pool') {
+                $ObjTempVirtualServer.defaultpool = $VirtualServer.pool
+            }
 
-                $iRule = $LoadBalancerObjects.iRules[$rule]
-                if($iRule){
-                    $iRule.virtualservers += $ObjTempVirtualServer.name
-                    if($iRule.pools.Count -gt 0){
-                        $ObjTempVirtualServer.pools += [array]$iRule.pools
-                    }
-                    Foreach($DatagroupName in $iRule.datagroups ) {
-                        $Datagroup = $LoadBalancerObjects.DataGroups[$DatagroupName]
-                        if ($Datagroup -and $Datagroup.pools.Count -gt 0) {
-                            $ObjTempVirtualServer.pools += [array]$Datagroup.pools
+            #Set the ssl profile to None by default, then check if there's an SSL profile and
+
+            $ObjTempVirtualServer.httpprofile = "None";
+            $ObjTempVirtualServer.compressionprofile = "None";
+            $ObjTempVirtualServer.profiletype = "Standard";
+
+            Foreach($Profile in $VirtualServer.profilesReference.items){
+                if ($ProfileDict[$Profile.fullPath]) {
+                    switch ($ProfileDict[$Profile.fullPath].kind) {
+                        "tm:ltm:profile:udp:udpstate"{
+                            $ObjTempVirtualServer.profiletype = "UDP"
+                        }
+                        "tm:ltm:profile:http-compression:http-compressionstate" {
+                            $ObjTempVirtualServer.compressionprofile = $Profile.fullPath
+                        }
+                        "tm:ltm:profile:client-ssl:client-sslstate" {
+                            $ObjTempVirtualServer.sslprofileclient += $Profile.fullPath
+                        }
+                        "tm:ltm:profile:server-ssl:server-sslstate" {
+                            $ObjTempVirtualServer.sslprofileserver += $Profile.fullPath
+                        }
+                        "tm:ltm:profile:fastl4:fastl4state" {
+                            $ObjTempVirtualServer.profiletype = "Fast L4"
+                        }
+                        "tm:ltm:profile:fasthttp:fasthttpstate" {
+                            $ObjTempVirtualServer.profiletype = "Fast HTTP"
+                        }
+                        "tm:ltm:profile:http:httpstate" {
+                            $ObjTempVirtualServer.httpprofile = $Profile.fullPath
+                        }
+                        default {
+                            #$ProfileDict[$Profile.fullPath].kind + "|" + $Profile.fullPath
                         }
                     }
-                } else {
-                    log error "iRule $rule not found (zero length?) for ${ObjTempVirtualServer.name} on $LoadBalancerName"
                 }
             }
-        }
 
-        #Get the persistence profile of the Virtual server
-
-        if (Get-Member -inputobject $VirtualServer -name 'persist') {
-            $ObjTempVirtualServer.persistence += "/" + $VirtualServer.persist.partition + "/" + $VirtualServer.persist.name
-            if (Get-Member -inputobject $VirtualServer -name 'fallbackPersistence') {
-                $ObjTempVirtualServer.persistence += $VirtualServer.fallbackPersistence
+            if ($null -eq $ObjTempVirtualServer.sslprofileclient) {
+                $ObjTempVirtualServer.sslprofileclient += "None";
             }
-        } else {
-            $ObjTempVirtualServer.persistence += "None"
-        }
+            if ($null -eq $ObjTempVirtualServer.sslprofileserver) {
+                $ObjTempVirtualServer.sslprofileserver += "None";
+            }
 
-        if("" -ne $ObjTempVirtualServer.defaultpool){
-            $ObjTempVirtualServer.pools += $ObjTempVirtualServer.defaultpool
-        }
-
-        $ObjTempVirtualServer.pools = $ObjTempVirtualServer.pools | Sort-Object -Unique
-
-        Try{
-            $ObjTempVirtualServer.sourcexlatetype = $VirtualServer.sourceAddressTranslation.type
-        } Catch {
-            $ObjTempVirtualServer.sourcexlatetype = "OLDVERSION"
-        }
-        Try{
-            $ObjTempVirtualServer.sourcexlatepool = $VirtualServer.sourceAddressTranslation.pool
-        } Catch {
-            $ObjTempVirtualServer.sourcexlatepool = ""
-        }
-
-
-        if($Global:Bigipreportconfig.Settings.iRules.enabled -eq $false){
-            #Hiding iRules to the users
+            #Get the iRules of the Virtual server
             $ObjTempVirtualServer.irules = @();
+            if (Get-Member -inputobject $VirtualServer -name 'rule') {
+                Foreach ($rule in $VirtualServer.rules){
+                    $ObjTempVirtualServer.irules += $rule
+
+                    $iRule = $LoadBalancerObjects.iRules[$rule]
+                    if($iRule){
+                        $iRule.virtualservers += $ObjTempVirtualServer.name
+                        if($iRule.pools.Count -gt 0){
+                            $ObjTempVirtualServer.pools += [array]$iRule.pools
+                        }
+                        Foreach($DatagroupName in $iRule.datagroups ) {
+                            $Datagroup = $LoadBalancerObjects.DataGroups[$DatagroupName]
+                            if ($Datagroup -and $Datagroup.pools.Count -gt 0) {
+                                $ObjTempVirtualServer.pools += [array]$Datagroup.pools
+                            }
+                        }
+                    } else {
+                        log error "iRule $rule not found (zero length?) for ${ObjTempVirtualServer.name} on $LoadBalancerName"
+                    }
+                }
+            }
+
+            #Get the persistence profile of the Virtual server
+
+            if (Get-Member -inputobject $VirtualServer -name 'persist') {
+                $ObjTempVirtualServer.persistence += "/" + $VirtualServer.persist.partition + "/" + $VirtualServer.persist.name
+                if (Get-Member -inputobject $VirtualServer -name 'fallbackPersistence') {
+                    $ObjTempVirtualServer.persistence += $VirtualServer.fallbackPersistence
+                }
+            } else {
+                $ObjTempVirtualServer.persistence += "None"
+            }
+
+            if("" -ne $ObjTempVirtualServer.defaultpool){
+                $ObjTempVirtualServer.pools += $ObjTempVirtualServer.defaultpool
+            }
+
+            $ObjTempVirtualServer.pools = $ObjTempVirtualServer.pools | Sort-Object -Unique
+
+            Try{
+                $ObjTempVirtualServer.sourcexlatetype = $VirtualServer.sourceAddressTranslation.type
+            } Catch {
+                $ObjTempVirtualServer.sourcexlatetype = "OLDVERSION"
+            }
+            Try{
+                $ObjTempVirtualServer.sourcexlatepool = $VirtualServer.sourceAddressTranslation.pool
+            } Catch {
+                $ObjTempVirtualServer.sourcexlatepool = ""
+            }
+
+            if($Global:Bigipreportconfig.Settings.iRules.enabled -eq $false){
+                #Hiding iRules to the users
+                $ObjTempVirtualServer.irules = @();
+            }
+
+            if(Get-Member -inputobject $VirtualServer -name 'vlans'){
+                $ObjTempVirtualServer.vlans = $VirtualServer.vlans
+            }
+
+            if(Get-Member -inputobject $VirtualServer -name 'vlansEnabled'){
+                $ObjTempVirtualServer.vlanstate = "enabled"
+            } elseif(Get-Member -inputobject $VirtualServer -name 'vlansDisabled'){
+                $ObjTempVirtualServer.vlanstate = "disabled"
+            }
+
+            $VirtualServerSASMPolicies = $LoadBalancerObjects.ASMPolicies.values | Where-Object { $_.virtualServers -contains $ObjTempVirtualServer.name }
+
+            if($null -ne $VirtualServerSASMPolicies){
+                $ObjTempVirtualServer.asmPolicies = $VirtualServerSASMPolicies.name
+            }
+
+            $ObjTempVirtualServer.trafficgroup = $TrafficGroupDict["/" + $VirtualServer.partition + "/" + $ObjTempVirtualServer.ip]
+
+            $ObjTempVirtualServer.availability = $VirtualStatsDict[$ObjTempVirtualServer.name].'status.availabilityState'.description
+            $ObjTempVirtualServer.enabled = $VirtualStatsDict[$ObjTempVirtualServer.name].'status.enabledState'.description
+
+            #Connection statistics
+            $ObjTempVirtualServer.currentconnections = $VirtualStatsDict[$ObjTempVirtualServer.name].'clientside.curConns'.value
+            $ObjTempVirtualServer.maximumconnections = $VirtualStatsDict[$ObjTempVirtualServer.name].'clientside.maxConns'.value
+
+            #CPU statistics
+            $ObjTempVirtualServer.cpuavg5sec = $VirtualStatsDict[$ObjTempVirtualServer.name].'fiveSecAvgUsageRatio'.value
+            $ObjTempVirtualServer.cpuavg1min = $VirtualStatsDict[$ObjTempVirtualServer.name].'oneMinAvgUsageRatio'.value
+            $ObjTempVirtualServer.cpuavg5min = $VirtualStatsDict[$ObjTempVirtualServer.name].'fiveMinAvgUsageRatio'.value
+
+            $LoadBalancerObjects.VirtualServers.add($ObjTempVirtualServer.name, $ObjTempVirtualServer)
         }
-
-        if(Get-Member -inputobject $VirtualServer -name 'vlans'){
-            $ObjTempVirtualServer.vlans = $VirtualServer.vlans
-        }
-
-        if(Get-Member -inputobject $VirtualServer -name 'vlansEnabled'){
-            $ObjTempVirtualServer.vlanstate = "enabled"
-        } elseif(Get-Member -inputobject $VirtualServer -name 'vlansDisabled'){
-            $ObjTempVirtualServer.vlanstate = "disabled"
-        }
-
-        $VirtualServerSASMPolicies = $LoadBalancerObjects.ASMPolicies.values | Where-Object { $_.virtualServers -contains $ObjTempVirtualServer.name }
-
-        if($null -ne $VirtualServerSASMPolicies){
-            $ObjTempVirtualServer.asmPolicies = $VirtualServerSASMPolicies.name
-        }
-
-        $ObjTempVirtualServer.trafficgroup = $TrafficGroupDict["/" + $VirtualServer.partition + "/" + $ObjTempVirtualServer.ip]
-
-        $ObjTempVirtualServer.availability = $VirtualStatsDict[$ObjTempVirtualServer.name].'status.availabilityState'.description
-        $ObjTempVirtualServer.enabled = $VirtualStatsDict[$ObjTempVirtualServer.name].'status.enabledState'.description
-
-        #Connection statistics
-        $ObjTempVirtualServer.currentconnections = $VirtualStatsDict[$ObjTempVirtualServer.name].'clientside.curConns'.value
-        $ObjTempVirtualServer.maximumconnections = $VirtualStatsDict[$ObjTempVirtualServer.name].'clientside.maxConns'.value
-
-        #CPU statistics
-        $ObjTempVirtualServer.cpuavg5sec = $VirtualStatsDict[$ObjTempVirtualServer.name].'fiveSecAvgUsageRatio'.value
-        $ObjTempVirtualServer.cpuavg1min = $VirtualStatsDict[$ObjTempVirtualServer.name].'oneMinAvgUsageRatio'.value
-        $ObjTempVirtualServer.cpuavg5min = $VirtualStatsDict[$ObjTempVirtualServer.name].'fiveMinAvgUsageRatio'.value
-
-        $LoadBalancerObjects.VirtualServers.add($ObjTempVirtualServer.name, $ObjTempVirtualServer)
+    } Catch {
+        log error "Unable to cache virtual servers from $LoadBalancerName."
     }
 
     #EndRegion
