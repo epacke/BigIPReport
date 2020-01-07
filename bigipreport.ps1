@@ -1871,7 +1871,7 @@ Function Write-JSONFile {
 
     $DestinationTempFile = $DestinationFile + ".tmp"
 
-    log verbose "Writing $DestinationTempFile from $PSScriptRoot"
+    log verbose "Writing $DestinationTempFile"
 
     $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 
@@ -1905,7 +1905,7 @@ Function Write-TemporaryFiles {
 
     $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 
-    log verbose "Writing $($Global:paths.report + ".tmp")"
+    log verbose "Writing $($Global:paths.report + ".tmp") from $PSScriptRoot"
 
     $HTMLContent = $Global:HTML.ToString();
 
