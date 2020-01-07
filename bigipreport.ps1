@@ -1503,7 +1503,9 @@ function Get-LTMInformation {
 
     try {
         $VirtualServerPools = $LoadBalancerObjects.VirtualServers.Values.Pools | Sort-Object -Unique
-    } catch {}
+    } catch {
+        $VirtualServerPools = $()
+    }
     $DataGroupPools = $LoadBalancerObjects.DataGroups.Values.pools | Sort-Object -Unique
 
     Foreach($PoolName in $LoadBalancerObjects.Pools.Keys){
