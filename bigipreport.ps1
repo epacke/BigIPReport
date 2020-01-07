@@ -1501,7 +1501,9 @@ function Get-LTMInformation {
     #Region Get Orphaned Pools
     log verbose "Detecting orphaned pools on $LoadBalancerName"
 
-    $VirtualServerPools = $LoadBalancerObjects.VirtualServers.Values.Pools | Sort-Object -Unique
+    try {
+        $VirtualServerPools = $LoadBalancerObjects.VirtualServers.Values.Pools | Sort-Object -Unique
+    } catch {}
     $DataGroupPools = $LoadBalancerObjects.DataGroups.Values.pools | Sort-Object -Unique
 
     Foreach($PoolName in $LoadBalancerObjects.Pools.Keys){
