@@ -1043,61 +1043,32 @@ function Get-LTMInformation {
 
     log verbose "Caching monitors from $LoadBalancerName"
 
-    #Save the HTTP monitors separately since they have different properties
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/http"
-    [array]$HttpMonitors = $Response.items
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/https"
-    [array]$HttpMonitors += $Response.items
+    $Monitors = $()
+    Foreach($MonitorType in ("http","https","icmp","gateway-icmp","real-server","snmp-dca","tcp-half-open","tcp","udp")) {
+        $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/$MonitorType"
+        [array]$Monitors += $Response.items
+    }
 
-    Foreach($HttpMonitor in $HttpMonitors){
+    Foreach($Monitor in $Monitors){
         $ObjTempMonitor = New-Object Monitor
 
-        $ObjTempMonitor.name = $HttpMonitor.name
-        if (Get-Member -inputobject $HttpMonitor -name "send") {
-            $ObjTempMonitor.sendstring = $HttpMonitor.send
+        $ObjTempMonitor.loadbalancer = $LoadBalancerName
+
+        $ObjTempMonitor.name = $Monitor.name
+        $ObjTempMonitor.interval = $Monitor.interval
+        $ObjTempMonitor.timeout = $Monitor.timeout
+        $ObjTempMonitor.type = $Monitor.kind.Replace("tm:ltm:monitor:","")
+
+        if (Get-Member -inputobject $Monitor -name "send") {
+            $ObjTempMonitor.sendstring = $Monitor.send
         } else {
             $ObjTempMonitor.sendstring = ""
         }
-        if (Get-Member -inputobject $HttpMonitor -name "recv") {
-            $ObjTempMonitor.receivestring = $HttpMonitor.recv
+        if (Get-Member -inputobject $Monitor -name "recv") {
+            $ObjTempMonitor.receivestring = $Monitor.recv
         } else {
             $ObjTempMonitor.receivestring = ""
         }
-        $ObjTempMonitor.interval = $HttpMonitor.interval
-        $ObjTempMonitor.timeout = $HttpMonitor.timeout
-        $ObjTempMonitor.type = $HttpMonitor.kind.Replace("tm:ltm:monitor:","")
-
-        $ObjTempMonitor.loadbalancer = $LoadBalancerName
-
-        $LoadBalancerObjects.Monitors.add($ObjTempMonitor.name, $ObjTempMonitor)
-    }
-
-    #Save the monitors which has interval and timeout properties
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/icmp"
-    [array]$OtherMonitors = $Response.items
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/gateway-icmp"
-    [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/real-server"
-    [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/snmp-dca"
-    [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/tcp-half-open"
-    [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/tcp"
-    [array]$OtherMonitors += $Response.items
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/udp"
-    [array]$OtherMonitors += $Response.items
-
-    Foreach($OtherMonitor in $OtherMonitors){
-        $ObjTempMonitor = New-Object Monitor
-
-        $ObjTempMonitor.name = $OtherMonitor.name
-        $ObjTempMonitor.sendstring = "N/A"
-        $ObjTempMonitor.receivestring = "N/A"
-        $ObjTempMonitor.interval = $OtherMonitor.interval
-        $ObjTempMonitor.timeout = $OtherMonitor.timeout
-        $ObjTempMonitor.type = $OtherMonitor.kind.Replace("tm:ltm:monitor:","")
-        $ObjTempMonitor.loadbalancer = $LoadBalancerName
 
         $LoadBalancerObjects.Monitors.add($ObjTempMonitor.name, $ObjTempMonitor)
     }
