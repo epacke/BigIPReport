@@ -282,6 +282,7 @@ if ($null -ne $Location) {
     Set-Location $Location
     $PSScriptRoot=$Location
 }
+
 # PowerShell does not apply PWD to the IO library
 if ([IO.Directory]::GetCurrentDirectory() -ne $PSScriptRoot) {
     [IO.Directory]::SetCurrentDirectory($PSScriptRoot)
