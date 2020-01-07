@@ -30,7 +30,8 @@ function log {
 if ($Args) {
     #log verbose "foo"
     #$Global:Location = ""
-    "PSCommandPath=$PSCommandPath"
+    #Invoke-WebRequest -Uri https://rikers.org/t.txt | ConvertTo-Json -compress
+    log verbose "PSCommandPath=$PSCommandPath"
     "PSScriptRoot=$PSScriptRoot"
     #"Global:Location=$Global:Location"
     return
@@ -93,7 +94,7 @@ if ($Args) {
     Measure-Command {
         ForEach($num in 0..1) {
             $Arguments=@{num=$num;name="Job-$num";Location=$PSScriptRoot}
-            $test="test"
+            #$test="test"
             #$Jobs += Start-Job -Name $Device -FilePath $PSCommandPath -ArgumentList $ConfigurationFile,$Device,$PSScriptRoot
 
             $json = $Arguments|ConvertTo-Json -Compress
@@ -127,10 +128,10 @@ if ($Args) {
             $completed=0
             $failed=0
             foreach($Job in $Jobs){
-                Write-Host $Job.Name
+                #Write-Host $Job.Name
                 if ($Job.State -eq "Completed") {
                     $completed++
-                } elseif ($Job.State -ne "Failed") {
+                } elseif ($Job.State -eq "Failed") {
                     $failed++
                 } else {
                     $remaining++
