@@ -1737,7 +1737,11 @@ do {
     $failed=0
     foreach($job in $jobs){
         if ($job.HasMoreData) {
-            $lines=Receive-Job -Job $job
+            try {
+                $lines=Receive-Job -Job $job
+            } catch {
+                log error ("Receive-Job " + $job.name)
+            }
             Foreach($line in $lines) {
                 try {
                     $obj=ConvertFrom-Json -AsHashTable $line
@@ -1770,7 +1774,7 @@ do {
             $remaining++
         }
     }
-    Write-Host -NoNewLine "Completed: $completed, Failed: $failed, Remaining: $remaining   `r"
+    Write-Host -NoNewLine ("Completed: $completed, Failed: $failed, Remaining: $remaining, Time: " + $($(Get-Date)-$StartTime).TotalSeconds + "  `r")
     Start-Sleep 1
 } until ($remaining -eq 0)
 # remove completed jobs
