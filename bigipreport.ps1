@@ -274,7 +274,7 @@ if ($null -eq $PollLoadBalancer) {
     $ErrorActionPreference = "Stop"
 } else {
     # children
-    $ErrorActionPreference = "Stop"
+    $ErrorActionPreference = "Continue"
     $ProgressPreference = "SilentlyContinue"
 }
 # PowerShell does not inherit PWD in pre v7
@@ -1741,6 +1741,7 @@ do {
                 $lines=Receive-Job -Job $job
             } catch {
                 log error ("Receive-Job " + $job.name)
+                $lines=$()
             }
             Foreach($line in $lines) {
                 try {
