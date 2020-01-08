@@ -1151,19 +1151,13 @@ function setupVirtualServerTable() {
             "className": "centeredCell",
             "render": function (data, type, row) {
                 if (!row.sourcexlatetype) {
-                    return "N/A";
+                    return "Unknown";
                 } else {
                     switch (row.sourcexlatetype) {
-                        case "SRC_TRANS_NONE":
-                            return "None";
-                        case "SRC_TRANS_AUTOMAP":
-                            return "Automap";
-                        case "SRC_TRANS_SNATPOOL":
+                        case "snat":
                             return "SNAT:" + row.sourcexlatepool;
-                        case "OLDVERSION":
-                            return "N/A in Bigip versions prior to 11.3";
                         default:
-                            return "Unknown";
+                            return row.sourcexlatetype;
                     }
                     return result;
                 }
@@ -1317,7 +1311,12 @@ function setupVirtualServerTable() {
                     "extend": "csvHtml5",
                     "titleAttr": "Download current filtered results in CSV format",
                     "className": "tableHeaderColumnButton exportFunctions",
-                    "action": downloadCSV
+                    "exportOptions": {
+                        "columns": ":visible",
+                        "stripHtml": false,
+                        "orthogonal": "export"
+                    },
+                    "customize": customizeCSV
                 }
             ]
         },
@@ -2742,20 +2741,11 @@ function showVirtualServerDetails(virtualserver, loadbalancer) {
         $("div#firstlayerdetailscontentdiv").attr("data-loadbalancer", matchingvirtualserver.loadbalancer);
 
         switch (matchingvirtualserver.sourcexlatetype) {
-            case "SRC_TRANS_NONE":
-                var xlate = "None";
-                break;
-            case "SRC_TRANS_AUTOMAP":
-                var xlate = "Automap";
-                break;
-            case "SRC_TRANS_SNATPOOL":
+            case "snat":
                 var xlate = "SNAT:" + matchingvirtualserver.sourcexlatepool;
                 break;
-            case "OLDVERSION":
-                var xlate = "N/A in Bigip versions prior to 11.3";
-                break;
             default:
-                var xlate = "Unknown";
+                var xlate = matchingvirtualserver.sourcexlatetype || "Unknown";
         }
 
         var trafficGroup = matchingvirtualserver.trafficgroup || "N/A"
