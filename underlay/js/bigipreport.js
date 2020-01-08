@@ -289,10 +289,14 @@ function initializeStatusVIPs() {
     }
 }
 
-function PoolMemberStatus(member) {
+function PoolMemberStatus(member, type) {
     var mStatus = member.enabled + ':' + member.availability;
 
-    if (mStatus == "enabled:available") {
+    if (type == 'export') {
+        return '';
+    } else if (type == 'filter') {
+        return mStatus;
+    } else if (mStatus == "enabled:available") {
         return '<span class="statusicon"><img src="images/green-circle-checkmark.png" alt="Available (Enabled)" title="' + mStatus + ' - Member is able to pass traffic"/></span>';
     } else if (mStatus == "enabled:unknown") {
         return '<span class="statusicon"><img src="images/blue-square-questionmark.png" alt="Unknown (Enabled)" title="' + mStatus + ' - Member status unknown"/></span>';
@@ -307,7 +311,7 @@ function PoolMemberStatus(member) {
 }
 
 function PoolStatus(pool, type) {
-    if (!pool) {
+    if (!pool || type == 'export') {
         return '';
     }
     var pStatus = pool.enabled + ':' + pool.availability;
@@ -369,8 +373,12 @@ function renderPoolMember(loadbalancer, member, type) {
     if (member !== null) {
         if (type == 'display' || type == 'print') {
             result += '<span data-member="' + member.ip + ':' + member.port + '">';
-            result += PoolMemberStatus(member);
+        }
+        result += PoolMemberStatus(member, type);
+        if (type == 'display' || type == 'print') {
             result += '</span>';
+        } else {
+            result += ' ';
         }
         name = member.name.split('/')[2];
         if (name != member.ip + ':' + member.port) {
@@ -400,6 +408,21 @@ function renderPoolCell(data, type, row, meta) {
         return "N/A";
     }
     var poolCell = '';
+    if (type == 'filter' || type == 'export') {
+        for (var i=0; i<data.length; i++) {
+            var pool = siteData.poolsMap.get(row.loadbalancer + ':' + data[i]);
+            if (pool) {
+                poolCell += renderPool(pool.loadbalancer, pool.name, type) + ': ';
+                if (pool.members !== null) {
+                    poolCell += renderPoolMember(pool.loadbalancer, pool.members[0], type);
+                    for (var m=1; m<pool.members.length; m++) {
+                        poolCell += ',' + renderPoolMember(pool.loadbalancer, pool.members[m], type);
+                    }
+                }
+            }
+        }
+        return poolCell;
+    }
     if (type == 'display') {
         var tid = "vs-" + meta.row;
         poolCell += '<div class="expand" id="expand-' + tid + '" style="display: none;">' +
@@ -3416,68 +3439,9 @@ function activateMenuButton(b) {
 
 function customizeCSV(csv, button, datatable) {
     var csvRows = csv.split('\n');
-    // bigip table uses value
-    csvRows[0] = csvRows[0].replace(/<[^>]* value=""([^"]*)""[^>]*>/gi, '$1')
-    // the rest of the tables have a span and a placeholder
+    // table headings have a span and a placeholder, replace with placeholder
     csvRows[0] = csvRows[0].replace(/<span[^>]*>[^<]*<\/span><[^>]* placeholder=""([^"]*)""[^>]*>/gi, '$1')
     return csvRows.join('\n');
-}
-
-function generateCSV() {
-
-    var csv = "name,description,ip,port,sslprofileclient,sslprofileserver,compressionprofile,persistenceprofile,availability,enabled," +
-        "currentconnections,cpuavg5sec,cpuavg1min,cpuavg5min,defaultpool,associated-pools,loadbalancer\n";
-
-
-    var getMembers = function (pool) {
-
-        var returnStr = ""
-
-        var first = true;
-        var firstmember = true;
-
-        for (var m in pool.members) {
-            if (!firstmember){ returnStr += ", "} else { firstmember = false;}
-            var member = pool.members[m]
-            returnStr += member.name + " (" + member.ip + ":" + member.port + ")";
-        }
-
-        return returnStr;
-    }
-
-
-    //$("#allbigips tbody tr.virtualserverrow").each(function () {
-    siteData.bigipTable.rows({filter:'applied'}).data().each(function (vs) {
-
-        var line = "";
-
-        if (vs.name !== "N/A (Orphan pool)") {
-
-            var line = vs.name + "," + (vs.description || "") + "," + (vs.ip || "") + "," + (vs.port || "") + ',"' + (vs.sslprofileclient || "None") + '","' +
-                (vs.sslprofileserver || "None") + '",' +(vs.compressionprofile || "None") + "," + (vs.persistenceprofile || "None") + "," + vs.availability + "," +
-                vs.enabled + "," + vs.currentconnections + "," + vs.cpuavg5sec + "," + vs.cpuavg1min + "," + vs.cpuavg5min + "," + (vs.defaultpool || "None") + ",";
-
-            var firstpool = true;
-
-            for (var p in vs.pools) {
-
-                if (!firstpool){ line += "|"} else { firstpool = false }
-
-                var pool = getPool(vs.pools[p], vs.loadbalancer);
-                line += '"' + pool.name + ": ";
-
-                line += getMembers(pool) + '"';
-            }
-
-            line += "," + vs.loadbalancer;
-
-        }
-
-        csv += line + "\n";
-
-    })
-
-    return (csv);
 }
 
 function downLoadTextFile(data, fileName) {
@@ -3492,24 +3456,4 @@ function downLoadTextFile(data, fileName) {
     element.click();
 
     document.body.removeChild(element);
-
-}
-
-function downloadCSV() {
-
-    var text = generateCSV();
-
-    var d = new Date();
-
-    var year = d.getFullYear();
-    var month = d.getMonth();
-    var day = d.getDay();
-
-    if(month < 10){ month = "0" + month }
-    if(day < 10){ day = "0" + day }
-
-    var fileName = year + "-" + month + "-" + day + "-bigipreportexport.csv";
-
-    downLoadTextFile(text, fileName);
-
 }
