@@ -165,6 +165,29 @@
         <!--
         **************************************************************************************************************************************
         *
+        *    This section contains optional navigation links that will be added to the upper right
+        *
+        *    Example
+            <NavLinks>
+                <NavLink>
+                    <Text>DevCentral</Text>
+                    <URI>https://devcentral.f5.com/</URI>
+                </NavLink>
+                <NavLink>
+                    <Text>F5 Support</Text>
+                    <URI>https://support.f5.com/</URI>
+                </NavLink>
+            </NavLinks>
+        *
+        **************************************************************************************************************************************
+        -->
+
+        <NavLinks>
+        </NavLinks>
+
+        <!--
+        **************************************************************************************************************************************
+        *
         *    Pool exceptions contains pools you don't want shown in the report, for instance any syslog pools.
         *    Can be left blank ($Global:poolexceptions = @())
         *

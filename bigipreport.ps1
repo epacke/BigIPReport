@@ -307,6 +307,9 @@ $Global:LoggedErrors = @()
 # balancer data for the report
 $Global:ReportObjects = c@{};
 
+# preferences
+$Global:Preferences = c@{}
+
 #No BOM Encoding in the log file
 $Global:Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 
@@ -632,13 +635,40 @@ if($null -eq $Global:Bigipreportconfig.Settings.ReportRoot -or $Global:Bigiprepo
 
 Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup){
     If ($null -eq $DeviceGroup.name -or $DeviceGroup.name -eq "") {
-        log error "A device group does not have any name. Please check the latest version of the configuration file."
+        log error "A device group does not have a name. Please check the latest version of the configuration file."
         $SaneConfig = $false
     }
 
     If ($null -eq $DeviceGroup.Device -or @($DeviceGroup.Device | Where-Object { $_ -ne "" } ).Count -eq 0) {
         log error "A device group does not have any devices, please re-check your configuration"
         $SaneConfig = $false
+    }
+}
+
+# Load Preferences
+$Global:Preferences['HideLoadBalancerFQDN'] = ($Global:Bigipreportconfig.Settings.HideLoadBalancerFQDN -eq $true)
+$Global:Preferences['PollingMaxPools'] = [int]$Global:Bigipreportconfig.Settings.RealTimeMemberStates.MaxPools
+$Global:Preferences['PollingMaxQueue'] = [int]$Global:Bigipreportconfig.Settings.RealTimeMemberStates.MaxQueue
+$Global:Preferences['PollingRefreshRate'] = [int]$Global:Bigipreportconfig.Settings.RealTimeMemberStates.RefreshRate
+$Global:Preferences['ShowDataGroupLinks'] = ($Global:Bigipreportconfig.Settings.iRules.ShowDataGroupLinks -eq $true)
+$Global:Preferences['ShowiRuleLinks'] = ($Global:Bigipreportconfig.Settings.iRules.ShowiRuleLinks -eq $true)
+$Global:Preferences['ShowiRules'] = ($Global:Bigipreportconfig.Settings.iRules.enabled -eq $true)
+$Global:Preferences['autoExpandPools'] = ($Global:Bigipreportconfig.Settings.autoExpandPools -eq $true)
+$Global:Preferences['regexSearch'] = ($Global:Bigipreportconfig.Settings.regexSearch -eq $true)
+$Global:Preferences['showAdcLinks'] = ($Global:Bigipreportconfig.Settings.showAdcLinks -eq $true)
+$Global:Preferences['NavLinks'] = c@{}
+
+if ((Get-Member -inputobject $Global:Bigipreportconfig.Settings -name 'NavLinks') -and (Get-Member -inputobject $Global:Bigipreportconfig.Settings.Navlinks -name 'NavLink')) {
+    Foreach($NavLink in $Global:Bigipreportconfig.Settings.NavLinks.NavLink){
+        If ($null -eq $NavLink.Text -or $NavLink.Text -eq "") {
+            log error "A NavLink does not have text."
+            $SaneConfig = $false
+        } elseif ($null -eq $NavLink.URI -or $NavLink.URI -eq "") {
+            log error "A NavLink does not have a URI."
+            $SaneConfig = $false
+        } else {
+            $Global:Preferences['NavLinks'][$NavLink.Text] = $NavLink.URI;
+        }
     }
 }
 
@@ -666,7 +696,6 @@ if(-not $SaneConfig){
 
 #Variables used for storing report data
 $Global:NATdict = c@{}
-$Global:Preferences = c@{}
 
 $Global:DeviceGroups = @();
 
@@ -2027,7 +2056,7 @@ $Global:HTML = [System.Text.StringBuilder]::new()
                 </tr>
             </table>
         </div>
-        <div id="updateavailablediv"></div>
+        <div id="navbuttondiv"></div>
         <div id="mainholder">
             <div class="sidemenu">
                 <div class="menuitem" id="virtualserversbutton" onclick="Javascript:showVirtualServers();"><img id="virtualserverviewicon" src="images/virtualservericon.png" alt="virtual servers"/> Virtual Servers</div>
@@ -2105,18 +2134,6 @@ $Global:HTML = [System.Text.StringBuilder]::new()
     </body>
 </html>
 '@)
-
-# Save Preferences
-$Global:Preferences['HideLoadBalancerFQDN'] = ($Global:Bigipreportconfig.Settings.HideLoadBalancerFQDN -eq $true)
-$Global:Preferences['PollingMaxPools'] = [int]$Global:Bigipreportconfig.Settings.RealTimeMemberStates.MaxPools
-$Global:Preferences['PollingMaxQueue'] = [int]$Global:Bigipreportconfig.Settings.RealTimeMemberStates.MaxQueue
-$Global:Preferences['PollingRefreshRate'] = [int]$Global:Bigipreportconfig.Settings.RealTimeMemberStates.RefreshRate
-$Global:Preferences['ShowDataGroupLinks'] = ($Global:Bigipreportconfig.Settings.iRules.ShowDataGroupLinks -eq $true)
-$Global:Preferences['ShowiRuleLinks'] = ($Global:Bigipreportconfig.Settings.iRules.ShowiRuleLinks -eq $true)
-$Global:Preferences['ShowiRules'] = ($Global:Bigipreportconfig.Settings.iRules.enabled -eq $true)
-$Global:Preferences['autoExpandPools'] = ($Global:Bigipreportconfig.Settings.autoExpandPools -eq $true)
-$Global:Preferences['regexSearch'] = ($Global:Bigipreportconfig.Settings.regexSearch -eq $true)
-$Global:Preferences['showAdcLinks'] = ($Global:Bigipreportconfig.Settings.showAdcLinks -eq $true)
 
 # Record some stats
 

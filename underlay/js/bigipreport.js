@@ -211,34 +211,43 @@ $(window).on("load", function () {
 
         **************************************************************************************************************/
 
+        NavButtonDiv(null,null,null);
         //Check if there's a new update
         setInterval(function () {
             $.ajax(document.location.href, {
                 type: 'HEAD',
-                success: function (response, status, xhr) {
-
-                    var currentreport = Date.parse(document.lastModified);
-                    var timesincerefresh=30;
-                    if (null != xhr.getResponseHeader('Last-Modified')) {
-                        var latestreport = new Date(xhr.getResponseHeader('Last-Modified')).getTime();
-                        // If there's been a new report, how long ago (in minutes)
-                        timesincerefresh = Math.round((((latestreport - currentreport) % 86400000) % 3600000) / 60000)
-                    }
-
-                    var updateavailable=''
-                    if (timesincerefresh > 60) {
-                        updateavailable+='<a href="javascript:document.location.reload()" class="criticalupdateavailable">Update available</a>';
-                    } else if (timesincerefresh > 0) {
-                        updateavailable+='<a href="javascript:document.location.reload()" class="updateavailable">Update available</a>';
-                    }
-                    $("div#updateavailablediv").html(updateavailable);
-                }
+                success: NavButtonDiv
             });
         }, 3000);
 
     });
 
 });
+
+// update Navigation Buttons based on HEAD polling date (if available)
+function NavButtonDiv(response, status, xhr) {
+    var currentreport = Date.parse(document.lastModified);
+    var timesincerefresh=0;
+    if (xhr && null != xhr.getResponseHeader('Last-Modified')) {
+        var latestreport = new Date(xhr.getResponseHeader('Last-Modified')).getTime();
+        // If there's been a new report, how long ago (in minutes)
+        timesincerefresh = Math.round((((latestreport - currentreport) % 86400000) % 3600000) / 60000)
+    }
+
+    var navbutton='<ul>'
+    if (timesincerefresh > 60) {
+        navbutton+='<li><button onclick="document.location.reload()" class="navbutton urgent">Update available</a></li>';
+    } else if (timesincerefresh > 0) {
+        navbutton+='<li><button onclick="document.location.reload()" class="navbutton important">Update available</a></li>';
+    } else {
+        navbutton+='<li><button onclick="document.location.reload()" class="navbutton">Refresh</button></li>';
+    }
+    for (var key in siteData.preferences.NavLinks) {
+        navbutton+='<li><button onclick="window.location.href=\'' + siteData.preferences.NavLinks[key] + '\'" class="navbutton">' + key + '</button></li>';
+    }
+    navbutton+='</ul>'
+    $("div#navbuttondiv").html(navbutton);
+}
 
 function initializeStatusVIPs() {
 
