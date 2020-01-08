@@ -218,20 +218,20 @@ $(window).on("load", function () {
                 success: function (response, status, xhr) {
 
                     var currentreport = Date.parse(document.lastModified);
-                    var latestreport = new Date(xhr.getResponseHeader('Last-Modified')).getTime();
-                    //var currenttime = new Date();
-
-                    // The time since this report was generated (in minutes)
-                    //timesincelatestgeneration = Math.round((((currenttime - latestreport) % 86400000) % 3600000) / 60000)
-
-                    // If there's been a new report, how long ago (in minutes)
-                    timesincerefresh = Math.round((((latestreport - currentreport) % 86400000) % 3600000) / 60000)
-
-                    if (timesincerefresh > 60) {
-                        $("div#updateavailablediv").html('<a href="javascript:document.location.reload()" class="criticalupdateavailable">Update available</a>');
-                    } else if (timesincerefresh > 0) {
-                        $("div#updateavailablediv").html('<a href="javascript:document.location.reload()" class="updateavailable">Update available</a>');
+                    var timesincerefresh=30;
+                    if (null != xhr.getResponseHeader('Last-Modified')) {
+                        var latestreport = new Date(xhr.getResponseHeader('Last-Modified')).getTime();
+                        // If there's been a new report, how long ago (in minutes)
+                        timesincerefresh = Math.round((((latestreport - currentreport) % 86400000) % 3600000) / 60000)
                     }
+
+                    var updateavailable=''
+                    if (timesincerefresh > 60) {
+                        updateavailable+='<a href="javascript:document.location.reload()" class="criticalupdateavailable">Update available</a>';
+                    } else if (timesincerefresh > 0) {
+                        updateavailable+='<a href="javascript:document.location.reload()" class="updateavailable">Update available</a>';
+                    }
+                    $("div#updateavailablediv").html(updateavailable);
                 }
             });
         }, 3000);
