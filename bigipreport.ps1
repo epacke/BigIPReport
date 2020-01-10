@@ -252,8 +252,9 @@
 #                                     stats to loggederrors, hide some columns by default, links in datagroups
 #                                     snat pool, new status searching, updated tab/button/input styling
 #                                     monitor column on pool table, new preferences.json
-#        5.3.1        2019-xx-xx      remove pssnapin, now runs on other platforms                                  Tim Riker       No
+#        5.4.0        2019-xx-xx      remove pssnapin, now runs on other platforms                                  Tim Riker       Yes
 #                                     requires powershell 6.x+ to get ConvertFrom-Json -AsHashTable
+#                                     csv on vs table uses datatables, custom link buttons, SAN on cert table
 #
 #        This script generates a report of the LTM configuration on F5 BigIP's.
 #        It started out as pet project to help co-workers know which traffic goes where but grew.
@@ -289,7 +290,7 @@ if ([IO.Directory]::GetCurrentDirectory() -ne $PSScriptRoot) {
 }
 
 #Script version
-$Global:ScriptVersion = "5.3.1"
+$Global:ScriptVersion = "5.4.0"
 
 #Variable used to calculate the time used to generate the report.
 $StartTime = Get-Date
@@ -951,7 +952,7 @@ function Get-LTMInformation {
 
         log verbose "Getting ASM Policy information from $LoadBalancerName"
         try {
-            $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/asm/policies"
+            $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/asm/policies"
         } Catch {
             log error "Unable to load ASM policies from $LoadBalancerName."
         }
@@ -983,7 +984,7 @@ function Get-LTMInformation {
 
     $Response = ""
     try {
-        $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert"
+        $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert"
     } catch {
         log error "Error loading certificates from $LoadBalancerIP"
     }
@@ -1043,7 +1044,7 @@ function Get-LTMInformation {
 
     log verbose "Caching nodes from $LoadBalancerName"
 
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/node"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/node"
     $Nodes = $Response.items
 
     Foreach($Node in $Nodes) {
@@ -1075,7 +1076,7 @@ function Get-LTMInformation {
 
     $Monitors = $()
     Foreach($MonitorType in ("http","https","icmp","gateway-icmp","real-server","snmp-dca","tcp-half-open","tcp","udp")) {
-        $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/$MonitorType"
+        $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/monitor/$MonitorType"
         [array]$Monitors += $Response.items
     }
 
@@ -1111,13 +1112,13 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.Pools = c@{}
 
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?expandSubcollections=true"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool?expandSubcollections=true"
     [array]$Pools = $Response.items
 
     $PoolStatsDict = c@{}
     If($MajorVersion -ge 12){
         # need 12+ to support members/stats
-        $Response = Invoke-WebRequest -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool/members/stats" |
+        $Response = Invoke-WebRequest -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/pool/members/stats" |
             ConvertFrom-Json -AsHashtable
         Foreach($PoolStat in $Response.entries.Values) {
             $PoolStatsDict.add($PoolStat.nestedStats.entries.tmName.description, $PoolStat.nestedStats.entries)
@@ -1144,7 +1145,7 @@ function Get-LTMInformation {
             log verbose ("Polling stats for " + $Pool.fullPath)
             # < v12 does not support member/stats, poll stats for each pool
             $uri = "https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") +"/stats?`$filter=partition%20eq%20" + $Pool.fullPath.Split("/")[1]
-            $Response = Invoke-WebRequest -Headers $Headers -Uri $uri | ConvertFrom-Json -AsHashtable
+            $Response = Invoke-WebRequest -SkipCertificateCheck -Headers $Headers -Uri $uri | ConvertFrom-Json -AsHashtable
             try {
                 $PoolStatsDict.add($Pool.fullPath, $Response.entries.Values.nestedStats.entries)
             } catch {
@@ -1162,7 +1163,7 @@ function Get-LTMInformation {
                 $MemberStats = $PoolStatsDict[$Pool.fullPath].$search.nestedStats.entries
             } catch {
                 $uri = "https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/","~") +"/members/stats"
-                $Response = Invoke-WebRequest -Headers $Headers -Uri $uri | ConvertFrom-Json -AsHashtable
+                $Response = Invoke-WebRequest -SkipCertificateCheck -Headers $Headers -Uri $uri | ConvertFrom-Json -AsHashtable
                 try {
                     $MemberStats = $Response.entries
                 } catch {
@@ -1209,7 +1210,7 @@ function Get-LTMInformation {
     $LoadBalancerObjects.DataGroups = c@{}
     $Pools = $LoadBalancerObjects.Pools.Keys | Sort-Object -Unique
 
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/internal"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/internal"
     $DataGroups = $Response.items
 
     Foreach($DataGroup in $DataGroups){
@@ -1255,7 +1256,7 @@ function Get-LTMInformation {
         $LoadBalancerObjects.DataGroups.add($ObjTempDataGroup.name, $ObjTempDataGroup)
     }
 
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/external"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/data-group/external"
 
     if (Get-Member -inputobject $Response -name 'items') {
         Foreach($DataGroup in $Response.items){
@@ -1279,7 +1280,7 @@ function Get-LTMInformation {
 
     $LoadBalancerObjects.iRules = c@{}
 
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/rule"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/rule"
     $iRules = $Response.items
 
     $LastPartition = ''
@@ -1323,13 +1324,13 @@ function Get-LTMInformation {
 
     log verbose "Caching profiles from $LoadBalancerName"
 
-    $ProfileLinks = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile"
+    $ProfileLinks = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile"
 
     $ProfileDict = c@{}
 
     Foreach($ProfileLink in $ProfileLinks.items.reference.link){
         $ProfileType = $ProfileLink.split("/")[7].split("?")[0]
-        $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile/${ProfileType}"
+        $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/profile/${ProfileType}"
         if (Get-Member -inputobject $Response -name 'items') {
             Foreach($Profile in $Response.items){
                 $ProfileDict.add($Profile.fullPath, $Profile)
@@ -1341,7 +1342,7 @@ function Get-LTMInformation {
 
     #Region Cache virtual address information
 
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual-address"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual-address"
     $VirtualAddresses = $Response.items
 
     $TrafficGroupDict = c@{}
@@ -1360,11 +1361,11 @@ function Get-LTMInformation {
 
     $Response = ""
     try {
-        $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual?expandSubcollections=true"
+        $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual?expandSubcollections=true"
         [array]$VirtualServers = $Response.items
 
         $VirtualStatsDict = c@{}
-        $Response = Invoke-WebRequest -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual/stats" |
+        $Response = Invoke-WebRequest -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/ltm/virtual/stats" |
             ConvertFrom-Json -AsHashtable
         Foreach($VirtualStat in $Response.entries.Values) {
             $VirtualStatsDict.add($VirtualStat.nestedStats.entries.tmName.description, $VirtualStat.nestedStats.entries)
@@ -1579,13 +1580,13 @@ Function Get-AuthToken {
 
     # REST login sometimes works, and sometimes does not. Try 3 times in case it's flakey
     try {
-        $Response  = Invoke-RestMethod -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
+        $Response  = Invoke-RestMethod -SkipCertificateCheck -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
     } catch {
         try {
-            $Response  = Invoke-RestMethod -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
+            $Response  = Invoke-RestMethod -SkipCertificateCheck -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
         } catch {
             try {
-                $Response  = Invoke-RestMethod -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
+                $Response  = Invoke-RestMethod -SkipCertificateCheck -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
             } catch {
                 return $null
             }
@@ -1618,7 +1619,7 @@ function GetDeviceInfo {
     $ObjLoadBalancer.isonlydevice = $IsOnlyDevice
 
     $BigIPHostname = ""
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/global-settings"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/global-settings"
     $BigIPHostname = $Response.hostname
 
     log verbose "Hostname is $BigipHostname for $Device"
@@ -1626,7 +1627,7 @@ function GetDeviceInfo {
     $ObjLoadBalancer.name = $BigIPHostname
 
     #Get information about ip, name, model and category
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/hardware"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/hardware"
     $Platform = $Response.entries.'https://localhost/mgmt/tm/sys/hardware/platform'.nestedStats.entries
     $systemInfo = $Response.entries.'https://localhost/mgmt/tm/sys/hardware/system-info'.nestedStats.entries
 
@@ -1664,7 +1665,7 @@ function GetDeviceInfo {
     log verbose "Fetching information about $BigIPHostname"
 
     #Get the version information
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/version"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/version"
 
     $ObjLoadBalancer.version = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Version.description
     $ObjLoadBalancer.build = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Build.description
@@ -1672,13 +1673,13 @@ function GetDeviceInfo {
     $ObjLoadBalancer.baseBuild = "unknown"
 
     #Get failover status to determine if the load balancer is active
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$Device/mgmt/tm/cm/failover-status"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$Device/mgmt/tm/cm/failover-status"
 
     $ObjLoadBalancer.active = $Response.entries.'https://localhost/mgmt/tm/cm/failover-status/0'.nestedStats.entries.status.description -eq "ACTIVE"
     $ObjLoadBalancer.color = $Response.entries.'https://localhost/mgmt/tm/cm/failover-status/0'.nestedStats.entries.color.description
 
     #Get provisioned modules
-    $Response = Invoke-RestMethod -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/provision"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/provision"
 
     $ModuleDict = c@{}
 
