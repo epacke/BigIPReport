@@ -1053,7 +1053,7 @@ function Get-LTMInformation {
         $ObjTempNode.ip = $Node.address
         $ObjTempNode.name = $Node.name
         if (Get-Member -inputobject $Node -name "description") {
-            $ObjTempNode.description = $Node.description
+            $ObjTempNode.description = [Regex]::Unescape($Node.description)
         } else {
             $ObjTempNode.description = ""
         }
@@ -1137,7 +1137,7 @@ function Get-LTMInformation {
         $ObjTempPool.allownat = $Pool.allowNat
         $ObjTempPool.allowsnat = $Pool.allowSnat
         if (Get-Member -inputobject $Pool -name 'description') {
-            $ObjTempPool.description = $Pool.description
+            $ObjTempPool.description = [Regex]::Unescape($Pool.description)
         } else {
             $ObjTempPool.description = ""
         }
@@ -1377,7 +1377,7 @@ function Get-LTMInformation {
             $ObjTempVirtualServer.loadbalancer = $LoadBalancerName
             $ObjTempVirtualServer.name = $VirtualServer.fullPath
             if (Get-Member -inputobject $VirtualServer -name 'description') {
-                $ObjTempVirtualServer.description = $VirtualServer.description
+                $ObjTempVirtualServer.description = [Regex]::Unescape($VirtualServer.description)
             }
             $ObjTempVirtualServer.ip = ($VirtualServer.destination -split "[/:]")[2]
             $ObjTempVirtualServer.port = $VirtualServer.destination.split(":")[1]
@@ -2024,7 +2024,7 @@ $Global:HTML = [System.Text.StringBuilder]::new()
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>BIG-IP Report</title>
+        <title>BigIPReport</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 
         <link href="css/pace.css" rel="stylesheet" type="text/css"/>
