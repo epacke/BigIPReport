@@ -1378,6 +1378,8 @@ function Get-LTMInformation {
             $ObjTempVirtualServer.name = $VirtualServer.fullPath
             if (Get-Member -inputobject $VirtualServer -name 'description') {
                 $ObjTempVirtualServer.description = [Regex]::Unescape($VirtualServer.description)
+            } else {
+                $ObjTempVirtualServer.description = ""
             }
             $ObjTempVirtualServer.ip = ($VirtualServer.destination -split "[/:]")[2]
             $ObjTempVirtualServer.port = $VirtualServer.destination.split(":")[1]
