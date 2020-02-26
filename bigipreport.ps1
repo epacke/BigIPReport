@@ -1636,14 +1636,19 @@ function GetDeviceInfo {
     $ObjLoadBalancer.model = $SystemInfo.psobject.properties.value.nestedStats.entries.platform.description
     $ObjLoadBalancer.category = $Platform.psobject.properties.value.nestedStats.entries.marketingName.description
 
-    If($ObjLoadBalancer.category -eq "Virtual Edition"){
+    If($ObjLoadBalancer.category -eq "BIG-IP Virtual Edition"){
         # Virtual Editions is using the base registration keys as serial numbers
+        $License = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/license"
         #$RegistrationKeys = $F5.ManagementLicenseAdministration.get_registration_keys();
-        $BaseRegistrationKey = $RegistrationKeys[0]
+        $BaseRegistrationKey = $License.entries."https://localhost/mgmt/tm/sys/license/0".nestedStats.entries.registrationKey.description
 
         $Serial = "Z" + $BaseRegistrationKey.split("-")[-1]
     } else {
         $Serial = $SystemInfo.psobject.properties.value.nestedStats.entries.bigipChassisSerialNum.description
+        $BoardSerial = $SystemInfo.psobject.properties.value.nestedStats.entries.hostBoardSerialNum.description
+        if ($BoardSerial -ne " ") {
+            $Serial += " " + $BoardSerial
+        }
     }
 
     $ObjLoadBalancer.serial = $Serial
