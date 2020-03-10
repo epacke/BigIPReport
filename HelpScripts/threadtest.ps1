@@ -30,13 +30,13 @@ function log {
 if ($Args) {
     #log verbose "foo"
     #$Global:Location = ""
-    #Invoke-WebRequest -Uri https://rikers.org/t.txt | ConvertTo-Json -compress
     log verbose "PSCommandPath=$PSCommandPath"
     "PSScriptRoot=$PSScriptRoot"
     #"Global:Location=$Global:Location"
     return
     $Args.count
     $Args[0]
+    Invoke-WebRequest -Uri https://ddddrikers.org/t.txt | ConvertTo-Json -compress
     try {
         $Data = ConvertFrom-Json $Args[0]
     } catch {
@@ -121,7 +121,7 @@ if ($Args) {
     #            $output | ConvertTo-Json -Compress
     #        }
         }
-
+exit
         # loop getting information from jobs
         do {
             $remaining=0
