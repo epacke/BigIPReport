@@ -212,7 +212,7 @@
 #        5.1.5        2018-05-14      delay loading tables until used, data group table, pool table w/ orphans      Tim Riker       No
 #                                     SSL server profile, column filters for all tables, simplify member display
 #                                     pool / member columns sort by count when clicked, some stats in log tab
-#        5.1.6        2018-05-18      Process DataGroups to build more pool links, track more Datagroup types       Tim Riker       No
+#        5.1.6        2018-05-18      Process Datagroups to build more pool links, track more Datagroup types       Tim Riker       No
 #                                     Datagroup links in iRules when no partition is specified
 #                                     adcLinks open in new window, show referenced datagroups in iRule table
 #                                     write some stats at the end of the build, force arrays for more json files
@@ -252,6 +252,7 @@
 #                                     stats to loggederrors, hide some columns by default, links in datagroups
 #                                     snat pool, new status searching, updated tab/button/input styling
 #                                     monitor column on pool table, new preferences.json
+#        5.3.1        2019-11-15      Bug fix for descriptions with quotes and some branding corrections            Tim Riker       No
 #        5.4.0        2019-xx-xx      remove pssnapin, now runs on other platforms                                  Tim Riker       Yes
 #                                     requires powershell 6.x+ to get ConvertFrom-Json -AsHashTable
 #                                     csv on vs table uses datatables, custom link buttons, SAN on cert table
@@ -986,7 +987,8 @@ function Get-LTMInformation {
     try {
         $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert"
     } catch {
-        log error "Error loading certificates from $LoadBalancerIP"
+        $ErrorBody = "Error loading certificates from $LoadBalancerIP : " + $_.ErrorDetails.Message
+        log error $ErrorBody
     }
 
     $unixEpochStart = new-object DateTime 1970,1,1,0,0,0,([DateTimeKind]::Utc)
@@ -1590,6 +1592,8 @@ Function Get-AuthToken {
             try {
                 $Response  = Invoke-RestMethod -SkipCertificateCheck -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
             } catch {
+                $ErrorBody = "Error getting auth token from $LoadBalancer : " + $_.ErrorDetails.Message
+                log error $ErrorBody
                 return $null
             }
         }
