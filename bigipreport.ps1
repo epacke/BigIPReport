@@ -1548,7 +1548,11 @@ function Get-LTMInformation {
     } catch {
         $VirtualServerPools = $()
     }
-    $DataGroupPools = $LoadBalancerObjects.DataGroups.Values.pools | Sort-Object -Unique
+    try {
+        $DataGroupPools = $LoadBalancerObjects.DataGroups.Values.pools | Sort-Object -Unique
+    } catch {
+        $DataGroupPools = $()
+    }
 
     Foreach($PoolName in $LoadBalancerObjects.Pools.Keys){
         If ($VirtualServerPools -NotContains $PoolName -and
@@ -1766,7 +1770,14 @@ do {
             try {
                 $lines=Receive-Job -Job $job
             } catch {
-                log error ("Receive-Job " + $job.name)
+                $ErrorBody = ("Receive-Job " + $job.name)
+                if (Get-Member -inputobject $_ -name 'ErrorDetails.Message') {
+                    $ErrorBody += $_.ErrorDetails.Message
+                }
+                if (Get-Member -inputobject $_ -name 'Exception.Message') {
+                    $ErrorBody += $_.Exception.Message
+                }
+                log error $ErrorBody
                 $lines=$()
             }
             Foreach($line in $lines) {
