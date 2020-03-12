@@ -273,6 +273,7 @@ Param(
 
 Set-StrictMode -Version Latest
 if ($null -eq $PollLoadBalancer) {
+    $Error.Clear()
     $ErrorActionPreference = "Stop"
 } else {
     # children
@@ -338,7 +339,7 @@ Function log {
         $LogLineDict["severity"] = $LogType.toupper()
         $LogLineDict["message"] = $Message
 
-        $LogLineDict|ConvertTo-Json -Compress
+        Write-Output $LogLineDict|ConvertTo-Json -Compress
         return
     }
 
@@ -1553,10 +1554,12 @@ function Get-LTMInformation {
 }
 #EndRegion
 
-#Region Function Get-AuthToken
+function GetDeviceInfo {
+    Param($LoadBalancerIP)
 
-Function Get-AuthToken {
-    Param($LoadBalancer)
+    $DevStartTime = Get-Date
+
+    log verbose "Getting data from $LoadBalancerIP"
 
     $User = $Global:Bigipreportconfig.Settings.Credentials.Username
     $Password = $Global:Bigipreportconfig.Settings.Credentials.Password
@@ -1584,56 +1587,32 @@ Function Get-AuthToken {
 
     # REST login sometimes works, and sometimes does not. Try 3 times in case it's flakey
     try {
-        $Response  = Invoke-RestMethod -SkipCertificateCheck -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
+        $TokenRequest  = Invoke-RestMethod -SkipCertificateCheck -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancerIP/mgmt/shared/authn/login"
+        log success "Got auth token from $LoadBalancerIP"
+        $AuthToken = $TokenRequest.token.token
+        $Headers = @{ "X-F5-Auth-Token" = $AuthToken; }
     } catch {
-        try {
-            $Response  = Invoke-RestMethod -SkipCertificateCheck -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
-        } catch {
-            try {
-                $Response  = Invoke-RestMethod -SkipCertificateCheck -Method "POST" -Headers $Headers -Body $Body -Uri "https://$LoadBalancer/mgmt/shared/authn/login"
-            } catch {
-                $ErrorBody = "Error getting auth token from $LoadBalancer : " + $_.ErrorDetails.Message
-                log error $ErrorBody
-                return $null
-            }
-        }
-    }
-
-    return $Response.token.token
-}
-
-#EndRegion
-
-function GetDeviceInfo {
-    Param($Device)
-
-    $DevStartTime = Get-Date
-
-    log verbose "Getting data from $Device"
-
-    $AuthToken = Get-AuthToken -Loadbalancer $Device
-    if ($null -eq $AuthToken) {
-        log error "Could not get auth token from $Device"
+        $ErrorBody = "Error getting auth token from $LoadBalancerIP : " + $_.ErrorDetails.Message
+        log error $ErrorBody
         Return
     }
-    $Headers = @{ "X-F5-Auth-Token" = $AuthToken; }
 
     $ObjLoadBalancer = New-Object -TypeName "Loadbalancer"
-    $ObjLoadBalancer.ip = $Device
+    $ObjLoadBalancer.ip = $LoadBalancerIP
     $ObjLoadBalancer.statusvip = New-Object -TypeName "PoolStatusVip"
 
     $ObjLoadBalancer.isonlydevice = $IsOnlyDevice
 
     $BigIPHostname = ""
-    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/global-settings"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/global-settings"
     $BigIPHostname = $Response.hostname
 
-    log verbose "Hostname is $BigipHostname for $Device"
+    log verbose "Hostname is $BigipHostname for $LoadBalancerIP"
 
     $ObjLoadBalancer.name = $BigIPHostname
 
     #Get information about ip, name, model and category
-    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/hardware"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/hardware"
     $Platform = $Response.entries.'https://localhost/mgmt/tm/sys/hardware/platform'.nestedStats.entries
     $systemInfo = $Response.entries.'https://localhost/mgmt/tm/sys/hardware/system-info'.nestedStats.entries
 
@@ -1642,7 +1621,7 @@ function GetDeviceInfo {
 
     If($ObjLoadBalancer.category -eq "BIG-IP Virtual Edition"){
         # Virtual Editions is using the base registration keys as serial numbers
-        $License = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/license"
+        $License = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/license"
         #$RegistrationKeys = $F5.ManagementLicenseAdministration.get_registration_keys();
         $BaseRegistrationKey = $License.entries."https://localhost/mgmt/tm/sys/license/0".nestedStats.entries.registrationKey.description
 
@@ -1676,7 +1655,7 @@ function GetDeviceInfo {
     log verbose "Fetching information about $BigIPHostname"
 
     #Get the version information
-    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/version"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/version"
 
     $ObjLoadBalancer.version = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Version.description
     $ObjLoadBalancer.build = $Response.entries.'https://localhost/mgmt/tm/sys/version/0'.nestedStats.entries.Build.description
@@ -1684,13 +1663,13 @@ function GetDeviceInfo {
     $ObjLoadBalancer.baseBuild = "unknown"
 
     #Get failover status to determine if the load balancer is active
-    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$Device/mgmt/tm/cm/failover-status"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/cm/failover-status"
 
     $ObjLoadBalancer.active = $Response.entries.'https://localhost/mgmt/tm/cm/failover-status/0'.nestedStats.entries.status.description -eq "ACTIVE"
     $ObjLoadBalancer.color = $Response.entries.'https://localhost/mgmt/tm/cm/failover-status/0'.nestedStats.entries.color.description
 
     #Get provisioned modules
-    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$Device/mgmt/tm/sys/provision"
+    $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/provision"
 
     $ModuleDict = c@{}
 
@@ -1822,91 +1801,6 @@ do {
 # remove completed jobs
 $jobs | Remove-Job
 
-#Region Function Test-ReportData
-
-#Verify that data from all the load balancers has been indexed by checking the pools variable
-function Test-ReportData {
-    $NoneMissing = $true
-    log verbose "Verifying load balancer data to make sure that no load balancer is missing"
-    #For every load balancer IP we will check that no pools or virtual servers are missing
-    Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup) {
-        $DeviceGroupHasData = $False
-        ForEach($Device in $DeviceGroup.Device){
-            $LoadBalancerObjects = $Global:ReportObjects[$Device]
-            If ($LoadBalancerObjects) {
-                $LoadBalancer = $LoadBalancerObjects.LoadBalancer
-                $LoadBalancerName = $LoadBalancer.name
-                # Only check for load balancers that is alone in a device group, or active
-                if($LoadBalancer.active -or $LoadBalancer.isonlydevice){
-                    $DeviceGroupHasData = $True
-                    #Verify that the $Global:virtualservers contains the $LoadBalancerName
-                    If ($LoadBalancerObjects.VirtualServers.Count -eq 0) {
-                        log error "$LoadBalancerName does not have any Virtual Server data"
-                        $NoneMissing = $false
-                    }
-                    #Verify that the $Global:pools contains the $LoadBalancerName
-                    If ($LoadBalancerObjects.Pools.Count -eq 0) {
-                        log error "$LoadBalancerName does not have any Pool data"
-                    }
-                    #Verify that the $Global:monitors contains the $LoadBalancerName
-                    If ($LoadBalancerObjects.Monitors.Count -eq 0){
-                        log error "$LoadBalancerName does not have any Monitor data"
-                        $NoneMissing = $false
-                    }
-                    #Verify that the $Global:irules contains the $LoadBalancerName
-                    If ($LoadBalancerObjects.iRules.Count -eq 0) {
-                        log error "$LoadBalancerName does not have any iRule data"
-                        $NoneMissing = $false
-                    }
-                    #Verify that the $Global:nodes contains the $LoadBalancerName
-                    if($LoadBalancerObjects.Nodes.Count -eq 0){
-                        log error "$LoadBalancerName does not have any Node data"
-                        $NoneMissing = $false
-                    }
-                    #Verify that the $Global:DataGroups contains the $LoadBalancerName
-                    if($LoadBalancerObjects.DataGroups.Count -eq 0){
-                        log error "$LoadBalancerName does not have any Data group data"
-                        $NoneMissing = $false
-                    }
-                    #Verify that the $Global:Certificates contains the $LoadBalancerName
-                    if($LoadBalancerObjects.Certificates.Count -eq 0){
-                        log error "$LoadBalancerName does not have any Certificate data"
-                        $NoneMissing = $false
-                    }
-                }
-            } Else {
-                log error "$Device does not seem to have been indexed"
-                $NoneMissing = $false
-            }
-        }
-        If (-Not $DeviceGroupHasData){
-            log error "Missing data from device group containing $($DeviceGroup.Device -Join ", ")."
-            $NoneMissing = $false
-        }
-    }
-    Return $NoneMissing
-}
-#EndRegion
-
-#Region Function Update-ReportData
-Function Update-ReportData {
-    [bool]$Status = $true
-
-    #Move the temp files to the actual report files
-    Foreach($path in $Global:paths.Values | Sort-Object) {
-        log verbose "Updating $path"
-        Move-Item -Force ($path + ".tmp") $path
-
-        if(!$?){
-            log error "Failed to update $path"
-            $Status  = $false
-        }
-    }
-
-    Return $Status
-}
-#EndRegion
-
 Function Write-JSONFile {
     Param($Data, $DestinationFile)
 
@@ -2013,7 +1907,68 @@ Function Write-TemporaryFiles {
 #EndRegion
 
 #Region Check for missing data
-if(-not (Test-ReportData)){
+
+#Verify that data from all the load balancers has been indexed by checking the pools variable
+$MissingData = $false
+log verbose "Verifying load balancer data to make sure that no load balancer is missing"
+#For every load balancer IP we will check that no pools or virtual servers are missing
+Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup) {
+    $DeviceGroupHasData = $False
+    ForEach($Device in $DeviceGroup.Device){
+        $LoadBalancerObjects = $Global:ReportObjects[$Device]
+        If ($LoadBalancerObjects) {
+            $LoadBalancer = $LoadBalancerObjects.LoadBalancer
+            $LoadBalancerName = $LoadBalancer.name
+            # Only check for load balancers that is alone in a device group, or active
+            if($LoadBalancer.active -or $LoadBalancer.isonlydevice){
+                $DeviceGroupHasData = $True
+                #Verify that the $Global:virtualservers contains the $LoadBalancerName
+                If ($LoadBalancerObjects.VirtualServers.Count -eq 0) {
+                    log error "$LoadBalancerName does not have any Virtual Server data"
+                    $MissingData = $true
+                }
+                #Verify that the $Global:pools contains the $LoadBalancerName
+                If ($LoadBalancerObjects.Pools.Count -eq 0) {
+                    log error "$LoadBalancerName does not have any Pool data"
+                }
+                #Verify that the $Global:monitors contains the $LoadBalancerName
+                If ($LoadBalancerObjects.Monitors.Count -eq 0){
+                    log error "$LoadBalancerName does not have any Monitor data"
+                    $MissingData = $true
+                }
+                #Verify that the $Global:irules contains the $LoadBalancerName
+                If ($LoadBalancerObjects.iRules.Count -eq 0) {
+                    log error "$LoadBalancerName does not have any iRule data"
+                    $MissingData = $true
+                }
+                #Verify that the $Global:nodes contains the $LoadBalancerName
+                if($LoadBalancerObjects.Nodes.Count -eq 0){
+                    log error "$LoadBalancerName does not have any Node data"
+                    $MissingData = $true
+                }
+                #Verify that the $Global:DataGroups contains the $LoadBalancerName
+                if($LoadBalancerObjects.DataGroups.Count -eq 0){
+                    log error "$LoadBalancerName does not have any Data group data"
+                    $MissingData = $true
+                }
+                #Verify that the $Global:Certificates contains the $LoadBalancerName
+                if($LoadBalancerObjects.Certificates.Count -eq 0){
+                    log error "$LoadBalancerName does not have any Certificate data"
+                    $MissingData = $true
+                }
+            }
+        } Else {
+            log error "$Device does not seem to have been indexed"
+            $MissingData = $true
+        }
+    }
+    If (-Not $DeviceGroupHasData){
+        log error "Missing data from device group containing $($DeviceGroup.Device -Join ", ")."
+        $MissingData = $true
+    }
+}
+
+if($MissingData){
     if(-not $Global:Bigipreportconfig.Settings.ErrorReportAnyway -eq $true){
         log error "Missing load balancer data, no report will be written"
         Send-Errors
@@ -2187,7 +2142,20 @@ if($TemporaryFilesWritten){
     #Adding a sleep to allow the script to finish writing
     Start-Sleep 5
 
-    if(Update-ReportData){
+    [bool]$MovedFiles = $true
+
+    #Move the temp files to the actual report files
+    Foreach($path in $Global:paths.Values | Sort-Object) {
+        log verbose "Updating $path"
+        Move-Item -Force ($path + ".tmp") $path
+
+        if(!$?){
+            log error "Failed to update $path"
+            $MovedFiles  = $false
+        }
+    }
+
+    if($MovedFiles){
         log success "The report has been successfully been updated"
     }
 } else {
