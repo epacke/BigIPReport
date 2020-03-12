@@ -1441,7 +1441,7 @@ function Get-LTMInformation {
 
             #Get the iRules of the Virtual server
             $ObjTempVirtualServer.irules = @();
-            if (Get-Member -inputobject $VirtualServer -name 'rule') {
+            if (Get-Member -inputobject $VirtualServer -name 'rules') {
                 Foreach ($rule in $VirtualServer.rules){
                     $ObjTempVirtualServer.irules += $rule
 
