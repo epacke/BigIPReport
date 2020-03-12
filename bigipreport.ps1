@@ -1594,7 +1594,7 @@ function GetDeviceInfo {
     } catch {
         $ErrorBody = "Error getting auth token from $LoadBalancerIP : " + $_.ErrorDetails.Message
         log error $ErrorBody
-        Return
+        Exit
     }
 
     $ObjLoadBalancer = New-Object -TypeName "Loadbalancer"
