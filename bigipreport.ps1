@@ -1254,6 +1254,8 @@ function Get-LTMInformation {
         if ($TempPools.Count -gt 0) {
             $ObjTempDataGroup.pools = @($TempPools | Sort-Object -Unique)
             $ObjTempDataGroup.type = "Pools"
+        } else {
+            $ObjTempDataGroup.pools = @()
         }
 
         $LoadBalancerObjects.DataGroups.add($ObjTempDataGroup.name, $ObjTempDataGroup)
@@ -1529,7 +1531,11 @@ function Get-LTMInformation {
             $LoadBalancerObjects.VirtualServers.add($ObjTempVirtualServer.name, $ObjTempVirtualServer)
         }
     } Catch {
-        log error "Unable to cache virtual servers from $LoadBalancerName."
+        $ErrorBody = "Unable to cache virtual servers from $LoadBalancerName : "
+        if (Get-Member -inputobject $_.ErrorDetails -name 'Message') {
+            $ErrorBody += $_.ErrorDetails.Message
+        }
+        log error $ErrorBody
     }
 
     #EndRegion
