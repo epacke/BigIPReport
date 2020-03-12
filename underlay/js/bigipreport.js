@@ -3449,6 +3449,7 @@ function downLoadTextFile(data, fileName) {
     var element = document.createElement('a');
     element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(data));
     element.setAttribute('download', fileName);
+    element.innerHTML = "download"
 
     element.style.display = 'none';
     document.body.appendChild(element);
