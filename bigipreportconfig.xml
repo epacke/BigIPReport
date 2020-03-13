@@ -168,16 +168,20 @@
         *    This section contains optional navigation links that will be added to the upper right
         *
         *    Example
-            <NavLinks>
-                <NavLink>
-                    <Text>DevCentral</Text>
-                    <URI>https://devcentral.f5.com/</URI>
-                </NavLink>
-                <NavLink>
-                    <Text>F5 Support</Text>
-                    <URI>https://support.f5.com/</URI>
-                </NavLink>
-            </NavLinks>
+        *   <NavLinks>
+        *       <NavLink>
+        *           <Text>json</Text>
+        *           <URI>json/</URI>
+        *       </NavLink>
+        *       <NavLink>
+        *           <Text>DevCentral</Text>
+        *           <URI>https://devcentral.f5.com/</URI>
+        *       </NavLink>
+        *       <NavLink>
+        *           <Text>F5 Support</Text>
+        *           <URI>https://support.f5.com/</URI>
+        *       </NavLink>
+        *   </NavLinks>
         *
         **************************************************************************************************************************************
         -->
