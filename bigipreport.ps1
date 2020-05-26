@@ -1455,7 +1455,7 @@ function Get-LTMInformation {
                         }
                         Foreach($DatagroupName in $iRule.datagroups ) {
                             $Datagroup = $LoadBalancerObjects.DataGroups[$DatagroupName]
-                            if ($Datagroup -and $Datagroup.pools.Count -gt 0) {
+                            if ($Datagroup -and $Datagroup.pools -and $Datagroup.pools.Count -gt 0) {
                                 $ObjTempVirtualServer.pools += [array]$Datagroup.pools
                             }
                         }
@@ -1532,8 +1532,11 @@ function Get-LTMInformation {
         }
     } Catch {
         $ErrorBody = "Unable to cache virtual servers from $LoadBalancerName : "
-        if (Get-Member -inputobject $_.ErrorDetails -name 'Message') {
+        if (Get-Member -inputobject $_ -name 'ErrorDetails.Message') {
             $ErrorBody += $_.ErrorDetails.Message
+        }
+        if (Get-Member -inputobject $_ -name 'Exception.Message') {
+            $ErrorBody += $_.Exception.Message
         }
         log error $ErrorBody
     }
