@@ -256,6 +256,7 @@
 #        5.4.0        2019-xx-xx      remove pssnapin, now runs on other platforms                                  Tim Riker       Yes
 #                                     requires powershell 6.x+ to get ConvertFrom-Json -AsHashTable
 #                                     csv on vs table uses datatables, custom link buttons, SAN on cert table
+#        5.4.1        2019-05-27      Add MaxJobs to control how many child processes to fork at once               Tim Riker       Yes
 #
 #        This script generates a report of the LTM configuration on F5 BigIP's.
 #        It started out as pet project to help co-workers know which traffic goes where but grew.
@@ -292,7 +293,7 @@ if ([IO.Directory]::GetCurrentDirectory() -ne $PSScriptRoot) {
 }
 
 #Script version
-$Global:ScriptVersion = "5.4.0"
+$Global:ScriptVersion = "5.4.1"
 
 #Variable used to calculate the time used to generate the report.
 $StartTime = Get-Date
@@ -547,6 +548,13 @@ if("true" -eq $Global:Bigipreportconfig.Settings.LogSettings.Enabled){
         log error "Logging has been enabled but all logging fields has not been configured"
         $SaneConfig = $false
     }
+}
+
+if($null -eq $Global:Bigipreportconfig.Settings.MaxJobs -or "" -eq $Global:Bigipreportconfig.Settings.MaxJobs){
+    log error "No MaxJobs configured"
+    $SaneConfig = $false
+} else {
+    $MaxJobs = $Global:Bigipreportconfig.Settings.MaxJobs
 }
 
 if($null -eq $Global:Bigipreportconfig.Settings.Outputlevel -or "" -eq $Global:Bigipreportconfig.Settings.Outputlevel){
@@ -1732,7 +1740,7 @@ function GetDeviceInfo {
 
 
 #Region Call Cache LTM information
-$jobs = @()
+$DevicesToStart = @()
 Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup) {
     $IsOnlyDevice = @($DeviceGroup.Device).Count -eq 1
     $StatusVIP = $DeviceGroup.StatusVip
@@ -1743,7 +1751,7 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
     Foreach($Device in $DeviceGroup.Device){
         $ObjDeviceGroup.ips += $Device
         if($null -eq $PollLoadBalancer){
-            $jobs += Start-Job -Name $Device -FilePath $PSCommandPath -ArgumentList $ConfigurationFile,$Device,$PSScriptRoot
+            $DevicesToStart += $Device
         } elseif ($Device -eq $PollLoadBalancer){
             GetDeviceInfo($PollLoadBalancer)
             $Global:ReportObjects[$PollLoadBalancer]|ConvertTo-Json -Compress -Depth 10
@@ -1764,9 +1772,10 @@ $Global:Out.Monitors=@()
 $Global:Out.Pools=@()
 $Global:Out.VirtualServers=@()
 
+$jobs = @()
 do {
     $completed=0
-    $remaining=0
+    $running=0
     $failed=0
     foreach($job in $jobs){
         if ($job.HasMoreData) {
@@ -1812,12 +1821,21 @@ do {
         } elseif ($job.State -eq "Failed") {
             $failed++
         } else {
-            $remaining++
+            $running++
         }
     }
-    Write-Host -NoNewLine ("Completed: $completed, Failed: $failed, Remaining: $remaining, Time: " + $($(Get-Date)-$StartTime).TotalSeconds + "  `r")
+    while ($DevicesToStart.length -gt 0 -and $running -lt $MaxJobs) {
+        $Device,$DevicesToStart = $DevicesToStart
+        if (! $DevicesToStart) {
+            $DevicesToStart = @()
+        }
+        $running++
+        log success ("Start-Job $Device ($running / $MaxJobs)")
+        $jobs += Start-Job -Name $Device -FilePath $PSCommandPath -ArgumentList $ConfigurationFile,$Device,$PSScriptRoot
+    }
+    Write-Host -NoNewLine ("Waiting: " + $DevicesToStart.length + ", Running: $running, Completed: $completed, Failed: $failed, Time: " + $($(Get-Date)-$StartTime).TotalSeconds + "  `r")
     Start-Sleep 1
-} until ($remaining -eq 0)
+} until ($DevicesToStart.length -eq 0 -and $running -eq 0)
 # remove completed jobs
 $jobs | Remove-Job
 
