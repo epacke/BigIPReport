@@ -139,7 +139,7 @@
 }
 
 /******************************************************************************************
-    Style for cell containing the pool and member information in the main table 
+    Style for cell containing the pool and member information in the main table
 *******************************************************************************************/
 
 /*The cell that contains the pool table */
@@ -609,8 +609,12 @@ div.beforedocumentready {
     text-align: center;
 }
 
-.bigipreportheader img {
-    max-height: 45px;
+.bigipreportheader h1 {
+    margin-bottom: -0.1em;
+    margin-top: -0.3em;
+    font-size: 4em;
+    font-family: "Rockwell", "Courier New", monospace;
+    font-weight: normal;
 }
 
 /****************************************************************************************************************************
