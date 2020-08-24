@@ -332,12 +332,14 @@ function PoolStatus(pool, type) {
     }
 }
 
-function VirtualServerStatus(row) {
+function VirtualServerStatus(row, type) {
     if (!row.enabled || !row.availability)
         return '';
     var vsStatus = row.enabled + ':' + row.availability;
 
-    if (vsStatus == "enabled:available") {
+    if (type == 'filter') {
+        return vsStatus;
+    } else if (vsStatus == "enabled:available") {
         return '<span class="statusicon"><img src="images/green-circle-checkmark.png" alt="Available (Enabled)"' +
             ' title="' + vsStatus + ' - The virtual server is available"/></span>';
     } else if (vsStatus == "enabled:unknown") {
@@ -642,9 +644,9 @@ function renderVirtualServer(loadbalancer, name, type) {
         result += '<span class="adcLinkSpan"><a target="_blank" href="https://' + loadbalancer;
         result += '/tmui/Control/jspmap/tmui/locallb/virtual_server/properties.jsp?name=' + name + '">Edit</a></span>';
     }
-    if (type == 'display' || type == 'print') {
+    if (type == 'display' || type == 'print' || type == 'filter') {
         var vs=getVirtualServer(name, loadbalancer);
-        result += VirtualServerStatus(vs);
+        result += VirtualServerStatus(vs, type);
     }
     if (type == 'display') {
         result += '<a';
