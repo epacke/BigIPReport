@@ -1640,7 +1640,6 @@ function GetDeviceInfo {
     $ObjLoadBalancer.model = $SystemInfo.psobject.properties.value.nestedStats.entries.platform.description
     $ObjLoadBalancer.category = $Platform.psobject.properties.value.nestedStats.entries.marketingName.description -replace "^BIG-IP ", ""
 
-
     If($ObjLoadBalancer.category -eq "Virtual Edition"){
         # Virtual Editions is using the base registration keys as serial numbers
         $License = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/license"
