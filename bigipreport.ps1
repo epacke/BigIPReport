@@ -607,10 +607,15 @@ if($null -eq $Global:Bigipreportconfig.Settings.ReportRoot -or $Global:Bigiprepo
         $Global:bigipreportconfig.Settings.ReportRoot += "/"
     }
 
-    if(-not (Test-Path $Global:Bigipreportconfig.Settings.ReportRoot)){
+    if(-not (Test-Path -PathType Container $Global:Bigipreportconfig.Settings.ReportRoot)){
         log error "Can't access the site root $($Global:Bigipreportconfig.Settings.ReportRoot)"
         $SaneConfig = $false
     } else {
+        # if we're not testing in underlay/ then copy resources over to insure they are up to date.
+        if ('underlay/' -ne $Global:bigipreportconfig.Settings.ReportRoot) {
+            log verbose "Copying underlay/* to $($Global:Bigipreportconfig.Settings.ReportRoot)"
+            Copy-Item -Recurse -Force -Path 'underlay/*' -Destination $Global:Bigipreportconfig.Settings.ReportRoot
+        }
         if(-not (Test-Path $($Global:Bigipreportconfig.Settings.ReportRoot + "json"))){
             log error "The folder $($Global:Bigipreportconfig.Settings.ReportRoot + "json") does not exist in the report root directory. Did you forget to copy the html files from the zip file?"
             $SaneConfig = $false
