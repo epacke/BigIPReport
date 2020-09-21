@@ -1028,7 +1028,7 @@ function Get-LTMInformation {
             $ObjCertificate = New-Object -TypeName "Certificate"
 
             $ObjCertificate.fileName = $Certificate.fullPath
-            $expiration = [datetime]::ParseExact($Certificate.apiRawValues.expiration.Replace(' GMT','').Replace("  "," "),"MMM d H:mm:ss yyyy",$null)
+            $expiration = [datetime]::ParseExact($Certificate.apiRawValues.expiration.Replace(' GMT','').Replace("  "," "),"MMM d H:mm:ss yyyy",[CultureInfo]::InvariantCulture)
             $ObjCertificate.expirationDate = ($expiration - $unixEpochStart).TotalSeconds
             $ObjCertificate.subject = $ObjSubject
             if (Get-Member -inputobject $Certificate -name "subjectAlternativeName") {
