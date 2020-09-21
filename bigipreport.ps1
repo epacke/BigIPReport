@@ -2023,6 +2023,7 @@ $Global:HTML = [System.Text.StringBuilder]::new()
         <link href="css/buttons.dataTables.min.css" rel="stylesheet" type="text/css">
         <link href="css/bigipreportstyle.css" rel="stylesheet" type="text/css">
         <link href="css/sh_style.css" rel="stylesheet" type="text/css">
+        <link rel="shortcut icon" href="images/favicon.ico">
 
         <script src="js/pace.js" data-pace-options="{ &quot;restartOnRequestAfter&quot;: false }"></script>
         <script src="js/jquery.min.js"></script>
