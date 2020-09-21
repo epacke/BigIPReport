@@ -1912,18 +1912,11 @@ Function Write-TemporaryFiles {
     if($Global:Bigipreportconfig.Settings.iRules.Enabled -eq $true){
         $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.irules -Data @($Global:Out.iRules | Sort-Object loadbalancer, name )
     } else {
-        log verbose "iRule links disabled in config. Writing empty json object to $($Global:irules + ".tmp")"
+        log verbose "iRule links disabled in config. Writing empty json object to $($Global:paths.irules + ".tmp")"
 
-        $StreamWriter = New-Object System.IO.StreamWriter($($Global:irules + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
+        $StreamWriter = New-Object System.IO.StreamWriter($($Global:paths.irules + ".tmp"), $false, $Utf8NoBomEncoding,0x10000)
 
-        #Since rules has been disabled, only write those defined
-        $RuleScope = $Global:Out.iRules | Where-Object { $_.name -in $Bigipreportconfig.Settings.iRules.iRule.iRuleName -and $_.loadbalancer -in $Bigipreportconfig.Settings.iRules.iRule.loadbalancer }
-
-        if($RuleScope.count -eq 0){
-            $StreamWriter.Write("[]")
-        } else {
-            $StreamWriter.Write($(ConvertTo-Json -Compress -Depth 5 [array]$RuleScope))
-        }
+        $StreamWriter.Write("[]")
 
         if(!$?){
             log error "Failed to update the temporary irules json file"
@@ -1960,36 +1953,29 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
             # Only check for load balancers that is alone in a device group, or active
             if($LoadBalancer.active -or $LoadBalancer.isonlydevice){
                 $DeviceGroupHasData = $True
-                #Verify that the $Global:virtualservers contains the $LoadBalancerName
                 If ($LoadBalancerObjects.VirtualServers.Count -eq 0) {
                     log error "$LoadBalancerName does not have any Virtual Server data"
                     $MissingData = $true
                 }
-                #Verify that the $Global:pools contains the $LoadBalancerName
                 If ($LoadBalancerObjects.Pools.Count -eq 0) {
                     log error "$LoadBalancerName does not have any Pool data"
                 }
-                #Verify that the $Global:monitors contains the $LoadBalancerName
                 If ($LoadBalancerObjects.Monitors.Count -eq 0){
                     log error "$LoadBalancerName does not have any Monitor data"
                     $MissingData = $true
                 }
-                #Verify that the $Global:irules contains the $LoadBalancerName
                 If ($LoadBalancerObjects.iRules.Count -eq 0) {
                     log error "$LoadBalancerName does not have any iRule data"
                     $MissingData = $true
                 }
-                #Verify that the $Global:nodes contains the $LoadBalancerName
                 if($LoadBalancerObjects.Nodes.Count -eq 0){
                     log error "$LoadBalancerName does not have any Node data"
                     $MissingData = $true
                 }
-                #Verify that the $Global:DataGroups contains the $LoadBalancerName
                 if($LoadBalancerObjects.DataGroups.Count -eq 0){
                     log error "$LoadBalancerName does not have any Data group data"
                     $MissingData = $true
                 }
-                #Verify that the $Global:Certificates contains the $LoadBalancerName
                 if($LoadBalancerObjects.Certificates.Count -eq 0){
                     log error "$LoadBalancerName does not have any Certificate data"
                     $MissingData = $true
