@@ -3216,7 +3216,8 @@ function showPoolDetails(pool, loadbalancer, layer = 'first') {
                             <tbody>
                                 <tr><td class="monitordetailstablerowheader"><b>Type</td><td>${matchingmonitor.type}</b></td></tr>
                                 <tr><td class="monitordetailstablerowheader"><b>Send string</td><td>${matchingmonitor.sendstring}</b></td></tr>
-                                <tr><td class="monitordetailstablerowheader"><b>Receive string</b></td><td>${matchingmonitor.receivestring}</td></tr>
+                                <tr><td class="monitordetailstablerowheader"><b>Receive String</b></td><td>${matchingmonitor.receivestring}</td></tr>
+                                <tr><td class="monitordetailstablerowheader"><b>Disable String</b></td><td>${matchingmonitor.disablestring}</td></tr>
                                 <tr><td class="monitordetailstablerowheader"><b>Interval</b></td><td>${matchingmonitor.interval}</td></tr>
                                 <tr><td class="monitordetailstablerowheader"><b>Timeout</b></td><td>${matchingmonitor.timeout}</td></tr>
                             </table>
@@ -3231,14 +3232,14 @@ function showPoolDetails(pool, loadbalancer, layer = 'first') {
 
                     let member = members[x];
 
-                    let protocol = matchingmonitors[i].type.replace(/^TTYPE_/, '');
+                    let protocol = matchingmonitors[i].type.replace(/:.*$/, '');
 
-                    if(['HTTP', 'HTTPS', 'TCP', 'TCP_HALF_OPEN'].includes(protocol)){
+                    if(['http', 'https', 'tcp', 'tcp-half-open'].includes(protocol)){
 
                         let curllink, netcatlink, httplink
                         let sendstring = matchingmonitors[i].sendstring;
 
-                        if(['HTTP', 'HTTPS'].includes(protocol)){
+                        if(['http', 'https'].includes(protocol)){
 
                             requestparameters = getMonitorRequestParameters(sendstring)
 
@@ -3264,7 +3265,7 @@ function showPoolDetails(pool, loadbalancer, layer = 'first') {
                                     curlcommand += ` -H &quot;${headername}:${headervalue}&quot;`;
                                 }
 
-                                var url = `${protocol.toLowerCase()}://${member.ip}:${member.port}${requestparameters['uri']}`;
+                                var url = `${protocol}://${member.ip}:${member.port}${requestparameters['uri']}`;
                                 curlcommand += ` ${url}`;
                             }
 
@@ -3272,14 +3273,14 @@ function showPoolDetails(pool, loadbalancer, layer = 'first') {
                             ' data-type="curl">curl<p>Curl command (CTRL+C)<input id="curlcommand" class="monitorcopybox" type="text" value="${curlcommand}"></p></a>`;
                         }
 
-                        if(protocol === 'HTTP' || protocol === 'TCP' || protocol === 'TCP_HALF_OPEN'){
+                        if(protocol === 'http' || protocol === 'tcp' || protocol === 'tcp-half-open'){
                             var netcatcommand = `echo -ne "${sendstring}" | nc ${member.ip} ${member.port}`;
                             netcatlink = `<a href="javascript:selectMonitorInpuText(this)" class="monitortest" onmouseover="javascript:selectMonitorInpuText(this)"
                             ' data-type="netcat">Netcat<p>Netcat command (CTRL+C)<input id="curlcommand" class="monitorcopybox" type="text" value=\'${netcatcommand}\'></p></a>`;
                         }
 
-                        if(protocol === 'HTTP' || protocol === 'HTTPS'){
-                            var url = `${protocol.toLowerCase()}://${member.ip}:${member.port}${requestparameters['uri']}`;
+                        if(protocol === 'http' || protocol === 'https'){
+                            var url = `${protocol}://${member.ip}:${member.port}${requestparameters['uri']}`;
                             httplink = `<a href="${url}" target="_blank" class="monitortest" onmouseover="javascript:selectMonitorInpuText(this)"
                             data-type="http">HTTP<p>HTTP Link (CTL+C)<input id="curlcommand" class="monitorcopybox" type="text" value="${url}"></p></a>`
                         }

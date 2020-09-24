@@ -817,6 +817,7 @@ Add-Type @'
         public string type;
         public string sendstring;
         public string receivestring;
+        public string disablestring;
         public string loadbalancer;
         public string interval;
         public string timeout;
@@ -1102,7 +1103,7 @@ function Get-LTMInformation {
 
         $ObjTempMonitor.loadbalancer = $LoadBalancerName
 
-        $ObjTempMonitor.name = $Monitor.name
+        $ObjTempMonitor.name = $Monitor.fullPath
         $ObjTempMonitor.interval = $Monitor.interval
         $ObjTempMonitor.timeout = $Monitor.timeout
         $ObjTempMonitor.type = $Monitor.kind.Replace("tm:ltm:monitor:","")
@@ -1116,6 +1117,12 @@ function Get-LTMInformation {
             $ObjTempMonitor.receivestring = $Monitor.recv
         } else {
             $ObjTempMonitor.receivestring = ""
+        }
+
+        if (Get-Member -inputobject $Monitor -name "recvDisable") {
+            $ObjTempMonitor.disablestring = $Monitor.recvDisable
+        } else {
+            $ObjTempMonitor.disablestring = ""
         }
 
         $LoadBalancerObjects.Monitors.add($ObjTempMonitor.name, $ObjTempMonitor)
