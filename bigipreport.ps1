@@ -986,7 +986,9 @@ function Get-LTMInformation {
             if (Get-Member -inputobject $Policy -name 'learningMode') {
                 $ObjTempPolicy.learningMode = $Policy.learningMode
             }
-            $ObjTempPolicy.virtualServers = $Policy.virtualServers
+            if (Get-Member -inputobject $Policy -name 'virtualServers') {
+                $ObjTempPolicy.virtualServers = $Policy.virtualServers
+            }
             $ObjTempPolicy.loadbalancer = $LoadBalancerName
 
             $LoadBalancerObjects.ASMPolicies.add($ObjTempPolicy.name, $ObjTempPolicy)
