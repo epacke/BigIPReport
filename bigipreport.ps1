@@ -284,8 +284,10 @@ if ($null -eq $PollLoadBalancer) {
 }
 # PowerShell does not inherit PWD in pre v7
 if ($null -ne $Location) {
-    Set-Location $Location
+    Set-Location -Path $Location
     $PSScriptRoot=$Location
+} else {
+    Set-Location -Path $PSScriptRoot
 }
 
 # PowerShell does not apply PWD to the IO library
