@@ -2648,10 +2648,10 @@ function translateStatus(member) {
     };
 
     switch (member.availability) {
-        case "AVAILABILITY_STATUS_GREEN":
+        case "available":
             translatedstatus['availability'] = "<span class=\"memberup\">UP</span>";
             break;
-        case "AVAILABILITY_STATUS_BLUE":
+        case "unknown":
             translatedstatus['availability'] = "<span class=\"memberunknown\">UNKNOWN</span>";
             break;
         default:
@@ -2659,13 +2659,13 @@ function translateStatus(member) {
     }
 
     switch (member.enabled) {
-        case "ENABLED_STATUS_ENABLED":
+        case "enabled":
             translatedstatus['enabled'] = "<span class=\"memberenabled\">Enabled</span>";
             break;
-        case "ENABLED_STATUS_DISABLED_BY_PARENT":
+        case "disabled-by-parent":
             translatedstatus['enabled'] = "<span class=\"memberdisabled\">Disabled by parent</span>";
             break;
-        case "ENABLED_STATUS_DISABLED":
+        case "disabled":
             translatedstatus['enabled'] = "<span class=\"memberdisabled\">Disabled</span>";
             break;
         default:
@@ -3156,8 +3156,8 @@ function showPoolDetails(pool, loadbalancer, layer = 'first') {
             <br>
             <div class="monitordetailsheader">Member details</div>
                 <table class="pooldetailstable">
-                <thead><tr><th>Member Name</th><th>Member IP</th><th>Port</th><th>Priority Group</th><th>Connections</th>
-                <th>Max Connections</th><th>Member Availability</th><th>Enabled</th><th>Member Status Description</th><th>Realtime Availability</th></tr></thead><tbody>`
+                <thead><tr><th>Name</th><th>IP</th><th>Port</th><th>Priority Group</th><th>Connections</th>
+                <th>Max Connections</th><th>Availability</th><th>Enabled</th><th>Status Description</th><th>Realtime Availability</th></tr></thead><tbody>`
 
         poolmonitors = matchingpool.monitors
 
