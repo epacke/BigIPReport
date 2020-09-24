@@ -258,6 +258,7 @@
 #                                     csv on vs table uses datatables, custom link buttons, SAN on cert table
 #        5.4.1        2019-05-27      Add MaxJobs to control how many child processes to fork at once               Tim Riker       Yes
 #        5.4.2        2020-09-21      copy underlay, disabled irule reporting, text logo, filter by status, locale  Tim Riker       No
+#        5.4.3        2020-09-24      fixes with monitors, member status, copying underlay, asm policies without vs Tim Riker       No
 #
 #        This script generates a report of the LTM configuration on F5 BigIP's.
 #        It started out as pet project to help co-workers know which traffic goes where but grew.
@@ -296,7 +297,7 @@ if ([IO.Directory]::GetCurrentDirectory() -ne $PSScriptRoot) {
 }
 
 #Script version
-$Global:ScriptVersion = "5.4.2"
+$Global:ScriptVersion = "5.4.3"
 
 #Variable used to calculate the time used to generate the report.
 $StartTime = Get-Date
