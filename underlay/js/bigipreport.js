@@ -3208,7 +3208,9 @@ function showPoolDetails(pool, loadbalancer, layer = 'first') {
 
                 matchingmonitor = matchingmonitors[i];
 
+                matchingmonitor.sendstring = matchingmonitor.sendstring.replace('<', '&lt;').replace('>', '&gt;');
                 matchingmonitor.receivestring = matchingmonitor.receivestring.replace('<', '&lt;').replace('>', '&gt;');
+                matchingmonitor.disablestring = matchingmonitor.disablestring.replace('<', '&lt;').replace('>', '&gt;');
 
                 table += `
                         <table class="monitordetailstable">
