@@ -276,18 +276,22 @@ Param(
 
 Set-StrictMode -Version Latest
 if ($null -eq $PollLoadBalancer) {
+    # parent process does not have a lb
     $Error.Clear()
     $ErrorActionPreference = "Stop"
-} else {
-    # children
-    $ErrorActionPreference = "Continue"
+    $ProgressPreference = "Continue"
+    Set-Location -Path $PSScriptRoot
+} elseif ($null -ne $Location) {
+    # child process has both lb and location
+    $ErrorActionPreference = "SilentlyContinue"
     $ProgressPreference = "SilentlyContinue"
-}
-# PowerShell does not inherit PWD in pre v7
-if ($null -ne $Location) {
+    # PowerShell does not inherit PWD in pre v7
     Set-Location -Path $Location
     $PSScriptRoot=$Location
 } else {
+    # testing has just lb but no location
+    $ErrorActionPreference = "Continue"
+    $ProgressPreference = "SilentlyContinue"
     Set-Location -Path $PSScriptRoot
 }
 
@@ -336,7 +340,7 @@ Function log {
     $CurrentTime =  $(Get-Date -UFormat "%Y-%m-%d %H:%M:%S")
     $LogHeader = $CurrentTime + ' ' + $($LogType.toUpper()) + ' '
 
-    if($null -ne $PollLoadBalancer){
+    if($null -ne $Location){
         # child processes just log to stdout
         $LogLineDict = @{}
 
@@ -1775,7 +1779,11 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
             $DevicesToStart += $Device
         } elseif ($Device -eq $PollLoadBalancer){
             GetDeviceInfo($PollLoadBalancer)
-            $Global:ReportObjects[$PollLoadBalancer]|ConvertTo-Json -Compress -Depth 10
+            if ($null -eq $Location) {
+                log verbose "Testing, so not writing results"
+            } else {
+                $Global:ReportObjects[$PollLoadBalancer]|ConvertTo-Json -Compress -Depth 10
+            }
             exit
         }
     }
@@ -2014,6 +2022,7 @@ Foreach($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGr
 }
 
 if($MissingData){
+    log error "Missing data, run script with xml and a loadbalancer name for more information"
     if(-not $Global:Bigipreportconfig.Settings.ErrorReportAnyway -eq $true){
         log error "Missing load balancer data, no report will be written"
         Send-Errors
