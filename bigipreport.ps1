@@ -981,7 +981,8 @@ function Get-LTMInformation {
         try {
             $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/asm/policies"
         } Catch {
-            log error "Unable to load ASM policies from $LoadBalancerName."
+            $Line = $_.InvocationInfo.ScriptLineNumber
+            log error "Unable to load ASM policies from $LoadBalancerName. (line $Line)"
         }
 
         Foreach($Policy in $Response.items){
@@ -1015,8 +1016,8 @@ function Get-LTMInformation {
     try {
         $Response = Invoke-RestMethod -SkipCertificateCheck -Headers $Headers -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert"
     } catch {
-        $ErrorBody = "Error loading certificates from $LoadBalancerIP : " + $_.ErrorDetails.Message
-        log error $ErrorBody
+        $Line = $_.InvocationInfo.ScriptLineNumber
+        log error "Error loading certificates from $LoadBalancerIP : $_ (line $Line)"
     }
 
     $unixEpochStart = new-object DateTime 1970,1,1,0,0,0,([DateTimeKind]::Utc)
@@ -1419,8 +1420,10 @@ function Get-LTMInformation {
             } else {
                 $ObjTempVirtualServer.description = ""
             }
-            $ObjTempVirtualServer.ip = ($VirtualServer.destination -split "[/:]")[2]
-            $ObjTempVirtualServer.port = $VirtualServer.destination.split(":")[1]
+            # remove partition name if present (internal vs do not have a partition)
+            $destination = $VirtualServer.destination -replace ".*/", ""
+            $ObjTempVirtualServer.ip = $destination.split(":")[0]
+            $ObjTempVirtualServer.port = $destination.split(":")[1]
 
             if(($ObjTempVirtualServer.port) -eq 0){
                 $ObjTempVirtualServer.port = "Any"
@@ -1564,14 +1567,8 @@ function Get-LTMInformation {
             $LoadBalancerObjects.VirtualServers.add($ObjTempVirtualServer.name, $ObjTempVirtualServer)
         }
     } Catch {
-        $ErrorBody = "Unable to cache virtual servers from $LoadBalancerName : "
-        if (Get-Member -inputobject $_ -name 'ErrorDetails.Message') {
-            $ErrorBody += $_.ErrorDetails.Message
-        }
-        if (Get-Member -inputobject $_ -name 'Exception.Message') {
-            $ErrorBody += $_.Exception.Message
-        }
-        log error $ErrorBody
+        $Line = $_.InvocationInfo.ScriptLineNumber
+        log error "Unable to cache virtual servers from $LoadBalancerName : $_ (line $Line)"
     }
 
     #EndRegion
@@ -1638,8 +1635,8 @@ function GetDeviceInfo {
         $AuthToken = $TokenRequest.token.token
         $Headers = @{ "X-F5-Auth-Token" = $AuthToken; }
     } catch {
-        $ErrorBody = "Error getting auth token from $LoadBalancerIP : " + $_.ErrorDetails.Message
-        log error $ErrorBody
+        $Line = $_.InvocationInfo.ScriptLineNumber
+        log error "Error getting auth token from $LoadBalancerIP : $_ (Line $Line)"
         Exit
     }
 
@@ -1811,14 +1808,8 @@ do {
             try {
                 $lines=Receive-Job -Job $job
             } catch {
-                $ErrorBody = ("Receive-Job " + $job.name)
-                if (Get-Member -inputobject $_ -name 'ErrorDetails.Message') {
-                    $ErrorBody += $_.ErrorDetails.Message
-                }
-                if (Get-Member -inputobject $_ -name 'Exception.Message') {
-                    $ErrorBody += $_.Exception.Message
-                }
-                log error $ErrorBody
+                $Line = $_.InvocationInfo.ScriptLineNumber
+                log error ("Receive-Job " + $job.name + $_ + " (line $line)")
                 $lines=$()
             }
             Foreach($line in $lines) {
@@ -1841,7 +1832,8 @@ do {
                         log error ($job.name+':Unmatched:'+$line)
                     }
                 } catch {
-                    log error ($job.name+':Unparsed:'+$line)
+                    $ScriptLine = $_.InvocationInfo.ScriptLineNumber
+                    log error ($job.name+':Unparsed:' + $line + " (line $ScriptLine)")
                 }
             }
         }
