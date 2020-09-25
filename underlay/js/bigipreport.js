@@ -2300,7 +2300,7 @@ function showDeviceOverview() {
 
             if (loadbalancer.success) {
 
-                var model = loadbalancer.model.toUpperCase();
+                var model = loadbalancer.model && loadbalancer.model.toUpperCase();
                 var deviceData = siteData.knownDevices[model] || false;
                 successFound = true;
 
