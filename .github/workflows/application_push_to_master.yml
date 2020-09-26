@@ -1,0 +1,17 @@
+name: Build, deploy to CI, test, deploy to staging
+on:
+  push:
+    paths:
+      - 'underlay/js/bigipreport.js'
+
+jobs:
+  build_and_deploy_ci:
+    name: Linting
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@aabbfeb2ce60b5bd82389903509092c4648a9713
+      - name: Install pre-requisites
+        run: npm install
+      - name: Lint
+        run: npm test
