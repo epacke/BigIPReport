@@ -15,6 +15,7 @@
   "rules": {
     "quotes": ["error", "single"],
     "max-len": ["error", { "code": 120 }],
+    "brace-style": ["error", "1tbs"],
     "space-before-blocks": 2,
     "jquery/no-fade": 0,
     "jquery/no-show": 0,
