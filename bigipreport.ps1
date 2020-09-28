@@ -281,16 +281,14 @@ if ($null -eq $PollLoadBalancer) {
     $ErrorActionPreference = "Stop"
     $ProgressPreference = "Continue"
     Set-Location -Path $PSScriptRoot
-}
-elseif ($null -ne $Location) {
+} elseif ($null -ne $Location) {
     # child process has both lb and location
     $ErrorActionPreference = "SilentlyContinue"
     $ProgressPreference = "SilentlyContinue"
     # PowerShell does not inherit PWD in pre v7
     Set-Location -Path $Location
     $PSScriptRoot = $Location
-}
-else {
+} else {
     # testing has just lb but no location
     $ErrorActionPreference = "Continue"
     $ProgressPreference = "SilentlyContinue"
@@ -406,13 +404,11 @@ if (Test-Path $ConfigurationFile) {
     if ($?) {
         $Outputlevel = $Global:Bigipreportconfig.Settings.Outputlevel
         log success "Successfully loaded the config file: $ConfigurationFile"
-    }
-    else {
+    } else {
         log error "Can't read the config file: $ConfigurationFile from $PSScriptRoot, or config file corrupt. Aborting."
         Exit
     }
-}
-else {
+} else {
     log error "Failed to load config file $ConfigurationFile from $PSScriptRoot. Aborting."
     Exit
 }
@@ -514,8 +510,7 @@ Function Send-Errors {
             Foreach ($Recipient in $Global:Bigipreportconfig.Settings.ErrorReporting.Recipients.Recipient) {
                 send-MailMessage -SmtpServer $Global:Bigipreportconfig.Settings.ErrorReporting.SMTPServer -To $Recipient -From $Global:Bigipreportconfig.Settings.ErrorReporting.Sender -Subject $Subject -Body $Body -BodyAsHtml
             }
-        }
-        else {
+        } else {
             log error "No error mail reporting enabled/configured"
         }
     }
@@ -566,8 +561,7 @@ if ("true" -eq $Global:Bigipreportconfig.Settings.LogSettings.Enabled) {
 if ($null -eq $Global:Bigipreportconfig.Settings.MaxJobs -or "" -eq $Global:Bigipreportconfig.Settings.MaxJobs) {
     log error "No MaxJobs configured"
     $SaneConfig = $false
-}
-else {
+} else {
     $MaxJobs = $Global:Bigipreportconfig.Settings.MaxJobs
 }
 
@@ -584,8 +578,7 @@ if ($Global:Bigipreportconfig.Settings.SelectNodes("Shares/Share").Count) {
 
         if ($?) {
             log success "Share $($Share.Path) was mounted successfully"
-        }
-        else {
+        } else {
             log error "Share $($Share.Path) could not be mounted"
             $SaneConfig = $false
         }
@@ -615,8 +608,7 @@ if ($null -eq $Global:Bigipreportconfig.Settings.RealTimeMemberStates) {
 if ($null -eq $Global:Bigipreportconfig.Settings.ReportRoot -or $Global:Bigipreportconfig.Settings.ReportRoot -eq "") {
     log error "No report root configured"
     $SaneConfig = $false
-}
-else {
+} else {
     #Make sure the report root ends with / or \
     if (-not $Global:bigipreportconfig.Settings.ReportRoot.endswith("/") -and -not $Global:bigipreportconfig.Settings.ReportRoot.endswith("\")) {
         $Global:bigipreportconfig.Settings.ReportRoot += "/"
@@ -625,8 +617,7 @@ else {
     if (-not (Test-Path -PathType Container $Global:Bigipreportconfig.Settings.ReportRoot)) {
         log error "Can't access the site root $($Global:Bigipreportconfig.Settings.ReportRoot)"
         $SaneConfig = $false
-    }
-    else {
+    } else {
         if ($null -eq $Location) {
             # only copy if we're the parent script
             # if we're not testing in underlay/ then copy resources over to insure they are up to date.
@@ -638,8 +629,7 @@ else {
         if (-not (Test-Path $($Global:Bigipreportconfig.Settings.ReportRoot + "json"))) {
             log error "The folder $($Global:Bigipreportconfig.Settings.ReportRoot + "json") does not exist in the report root directory. Did you forget to copy the html files from the zip file?"
             $SaneConfig = $false
-        }
-        elseif ( @(Get-ChildItem -path $($Global:Bigipreportconfig.Settings.ReportRoot + "json")).count -eq 0) {
+        } elseif ( @(Get-ChildItem -path $($Global:Bigipreportconfig.Settings.ReportRoot + "json")).count -eq 0) {
             log error "The folder $($Global:Bigipreportconfig.Settings.ReportRoot + "json") does not contain any files. Did you accidentally delete some files?"
             $SaneConfig = $false
         }
@@ -647,8 +637,7 @@ else {
         if (-not (Test-Path $($Global:Bigipreportconfig.Settings.ReportRoot + "js"))) {
             log error "The folder $($Global:Bigipreportconfig.Settings.ReportRoot + "js") does not exist in the report root directory. Did you forget to copy the html files from the zip file?"
             $SaneConfig = $false
-        }
-        elseif ( (Get-ChildItem -path $($Global:Bigipreportconfig.Settings.ReportRoot + "js")).count -eq 0) {
+        } elseif ( (Get-ChildItem -path $($Global:Bigipreportconfig.Settings.ReportRoot + "js")).count -eq 0) {
             log error "The folder $($Global:Bigipreportconfig.Settings.ReportRoot + "js") does not contain any files. Did you accidentally delete some files?"
             $SaneConfig = $false
         }
@@ -656,8 +645,7 @@ else {
         if (-not (Test-Path $($Global:Bigipreportconfig.Settings.ReportRoot + "images"))) {
             log error "The folder $($Global:Bigipreportconfig.Settings.ReportRoot + "images") does not exist in the report root directory. Did you forget to copy the html files from the zip file?"
             $SaneConfig = $false
-        }
-        elseif ( (Get-ChildItem -path $($Global:Bigipreportconfig.Settings.ReportRoot + "images")).count -eq 0) {
+        } elseif ( (Get-ChildItem -path $($Global:Bigipreportconfig.Settings.ReportRoot + "images")).count -eq 0) {
             log error "The folder $($Global:Bigipreportconfig.Settings.ReportRoot + "images") does not contain any files. Did you accidentally delete some files?"
             $SaneConfig = $false
         }
@@ -665,8 +653,7 @@ else {
         if (-not (Test-Path $($Global:Bigipreportconfig.Settings.ReportRoot + "css"))) {
             log error "The folder $($Global:Bigipreportconfig.Settings.ReportRoot + "css") does not exist in the report root directory. Did you forget to copy the html files from the zip file?"
             $SaneConfig = $false
-        }
-        elseif ( (Get-ChildItem -path $($Global:Bigipreportconfig.Settings.ReportRoot + "css")).count -eq 0) {
+        } elseif ( (Get-ChildItem -path $($Global:Bigipreportconfig.Settings.ReportRoot + "css")).count -eq 0) {
             log error "The folder $($Global:Bigipreportconfig.Settings.ReportRoot + "css") does not contain any files. Did you accidentally delete some files?"
             $SaneConfig = $false
         }
@@ -703,12 +690,10 @@ if ((Get-Member -inputobject $Global:Bigipreportconfig.Settings -name 'NavLinks'
         If ($null -eq $NavLink.Text -or $NavLink.Text -eq "") {
             log error "A NavLink does not have text."
             $SaneConfig = $false
-        }
-        elseif ($null -eq $NavLink.URI -or $NavLink.URI -eq "") {
+        } elseif ($null -eq $NavLink.URI -or $NavLink.URI -eq "") {
             log error "A NavLink does not have a URI."
             $SaneConfig = $false
-        }
-        else {
+        } else {
             $Global:Preferences['NavLinks'][$NavLink.Text] = $NavLink.URI;
         }
     }
@@ -724,8 +709,7 @@ if (-not $SaneConfig) {
 
     log verbose "Exiting"
     Exit
-}
-else {
+} else {
     log success "Pre execution checks were successful"
 }
 
@@ -955,20 +939,17 @@ if ($Global:Bigipreportconfig.Settings.NATFilePath -ne "") {
             $ArrLine = $_.split("=").Trim()
             if ($ArrLine.Count -eq 2) {
                 $Global:NATdict[$arrLine[1]] = $arrLine[0]
-            }
-            else {
+            } else {
                 log error "Malformed NAT file content detected: Check $_"
             }
         }
 
         if ($NATdict.count -gt 0) {
             log success "Loaded $($NATdict.count) NAT entries"
-        }
-        else {
+        } else {
             log error "No NAT entries loaded"
         }
-    }
-    else {
+    } else {
         log error "NAT file could not be found in location $($Global:Bigipreportconfig.Settings.NATFilePath)"
     }
 }
@@ -999,8 +980,7 @@ function Get-LTMInformation {
         log verbose "Getting ASM Policy information from $LoadBalancerName"
         try {
             $Response = Invoke-RestMethod -WebSession $Session -SkipCertificateCheck -Uri "https://$LoadBalancerIP/mgmt/tm/asm/policies"
-        }
-        Catch {
+        } Catch {
             $Line = $_.InvocationInfo.ScriptLineNumber
             log error "Unable to load ASM policies from $LoadBalancerName. (line $Line)"
         }
@@ -1035,8 +1015,7 @@ function Get-LTMInformation {
     $Response = ""
     try {
         $Response = Invoke-RestMethod -WebSession $Session -SkipCertificateCheck -Uri "https://$LoadBalancerIP/mgmt/tm/sys/crypto/cert"
-    }
-    catch {
+    } catch {
         $Line = $_.InvocationInfo.ScriptLineNumber
         log error "Error loading certificates from $LoadBalancerIP : $_ (line $Line)"
     }
@@ -1074,14 +1053,12 @@ function Get-LTMInformation {
             $ObjCertificate.subject = $ObjSubject
             if (Get-Member -inputobject $Certificate -name "subjectAlternativeName") {
                 $ObjCertificate.subjectAlternativeName = $Certificate.subjectAlternativeName.replace('DNS:', '')
-            }
-            else {
+            } else {
                 $ObjCertificate.subjectAlternativeName = ""
             }
             if (Get-Member -inputobject $Certificate -name "issuer") {
                 $ObjCertificate.issuer = $Certificate.issuer
-            }
-            else {
+            } else {
                 $ObjCertificate.issuer = ""
             }
             $ObjCertificate.loadbalancer = $LoadBalancerName
@@ -1108,8 +1085,7 @@ function Get-LTMInformation {
         $ObjTempNode.name = $Node.name
         if (Get-Member -inputobject $Node -name "description") {
             $ObjTempNode.description = [Regex]::Unescape($Node.description)
-        }
-        else {
+        } else {
             $ObjTempNode.description = ""
         }
         $ObjTempNode.loadbalancer = $LoadBalancerName
@@ -1147,21 +1123,18 @@ function Get-LTMInformation {
 
         if (Get-Member -inputobject $Monitor -name "send") {
             $ObjTempMonitor.sendstring = $Monitor.send
-        }
-        else {
+        } else {
             $ObjTempMonitor.sendstring = ""
         }
         if (Get-Member -inputobject $Monitor -name "recv") {
             $ObjTempMonitor.receivestring = $Monitor.recv
-        }
-        else {
+        } else {
             $ObjTempMonitor.receivestring = ""
         }
 
         if (Get-Member -inputobject $Monitor -name "recvDisable") {
             $ObjTempMonitor.disablestring = $Monitor.recvDisable
-        }
-        else {
+        } else {
             $ObjTempMonitor.disablestring = ""
         }
 
@@ -1202,8 +1175,7 @@ function Get-LTMInformation {
         $ObjTempPool.allowsnat = $Pool.allowSnat
         if (Get-Member -inputobject $Pool -name 'description') {
             $ObjTempPool.description = [Regex]::Unescape($Pool.description)
-        }
-        else {
+        } else {
             $ObjTempPool.description = ""
         }
         if (!$PoolStatsDict[$Pool.fullPath]) {
@@ -1213,8 +1185,7 @@ function Get-LTMInformation {
             $Response = Invoke-WebRequest -WebSession $Session -SkipCertificateCheck -Uri $uri | ConvertFrom-Json -AsHashtable
             try {
                 $PoolStatsDict.add($Pool.fullPath, $Response.entries.Values.nestedStats.entries)
-            }
-            catch {
+            } catch {
                 $PoolStatsDict.add($Pool.fullPath, $Response.entries)
             }
         }
@@ -1227,14 +1198,12 @@ function Get-LTMInformation {
             $search = 'https://localhost/mgmt/tm/ltm/pool/members/' + $Pool.fullPath.replace("/", "~") + '/members/stats'
             try {
                 $MemberStats = $PoolStatsDict[$Pool.fullPath].$search.nestedStats.entries
-            }
-            catch {
+            } catch {
                 $uri = "https://$LoadBalancerIP/mgmt/tm/ltm/pool/" + $Pool.fullPath.replace("/", "~") + "/members/stats"
                 $Response = Invoke-WebRequest -WebSession $Session -SkipCertificateCheck -Uri $uri | ConvertFrom-Json -AsHashtable
                 try {
                     $MemberStats = $Response.entries
-                }
-                catch {
+                } catch {
                     $MemberStats = c@ {}
                 }
                 #.psobject.Properties.Value.nestedStats.entries
@@ -1255,8 +1224,7 @@ function Get-LTMInformation {
                     #$ObjTempPool.name + "|" + $PoolMember.fullPath + "|" + $MemberStatsDict[$PoolMember.fullPath].'status.availabilityState'.description
                     try {
                         $ObjTempMember.Availability = $MemberStatsDict[$PoolMember.fullPath].'status.availabilityState'.description
-                    }
-                    catch {
+                    } catch {
                         $ObjTempMember.Availability = ""
                     }
                     $ObjTempMember.Enabled = $MemberStatsDict[$PoolMember.fullPath].'status.enabledState'.description
@@ -1265,8 +1233,7 @@ function Get-LTMInformation {
 
                     $ObjTempPool.members += $ObjTempMember
                 }
-            }
-            catch {}
+            } catch {}
         }
         $LoadBalancerObjects.Pools.add($ObjTempPool.name, $ObjTempPool)
     }
@@ -1298,8 +1265,7 @@ function Get-LTMInformation {
             Foreach ($Record in $DataGroup.records) {
                 if (Get-Member -inputobject $Record -name 'data') {
                     $DgData.Add($Record.name, $Record.data)
-                }
-                else {
+                } else {
                     $DgData.Add($Record.name, "")
                     continue
                 }
@@ -1307,8 +1273,7 @@ function Get-LTMInformation {
                 # if data contains pool names, add to .pools and change type to Pools
                 if ($record.data.contains("/")) {
                     $TempPool = $Record.data
-                }
-                else {
+                } else {
                     $TempPool = "/$Partition/" + $Record.data
                 }
 
@@ -1323,8 +1288,7 @@ function Get-LTMInformation {
         if ($TempPools.Count -gt 0) {
             $ObjTempDataGroup.pools = @($TempPools | Sort-Object -Unique)
             $ObjTempDataGroup.type = "Pools"
-        }
-        else {
+        } else {
             $ObjTempDataGroup.pools = @()
         }
 
@@ -1366,8 +1330,7 @@ function Get-LTMInformation {
         $ObjiRule.name = $iRule.fullPath
         if (Get-Member -inputobject $iRule -name "apiAnonymous") {
             $ObjiRule.definition = $iRule.apiAnonymous
-        }
-        else {
+        } else {
             $ObjiRule.definition = ""
         }
         $ObjiRule.loadbalancer = $LoadBalancerName
@@ -1454,8 +1417,7 @@ function Get-LTMInformation {
             $ObjTempVirtualServer.name = $VirtualServer.fullPath
             if (Get-Member -inputobject $VirtualServer -name 'description') {
                 $ObjTempVirtualServer.description = [Regex]::Unescape($VirtualServer.description)
-            }
-            else {
+            } else {
                 $ObjTempVirtualServer.description = ""
             }
             # remove partition name if present (internal vs do not have a partition)
@@ -1533,8 +1495,7 @@ function Get-LTMInformation {
                                 $ObjTempVirtualServer.pools += [array]$Datagroup.pools
                             }
                         }
-                    }
-                    else {
+                    } else {
                         log error "iRule $rule not found (zero length?) for ${ObjTempVirtualServer.name} on $LoadBalancerName"
                     }
                 }
@@ -1547,8 +1508,7 @@ function Get-LTMInformation {
                 if (Get-Member -inputobject $VirtualServer -name 'fallbackPersistence') {
                     $ObjTempVirtualServer.persistence += $VirtualServer.fallbackPersistence
                 }
-            }
-            else {
+            } else {
                 $ObjTempVirtualServer.persistence += "None"
             }
 
@@ -1560,14 +1520,12 @@ function Get-LTMInformation {
 
             Try {
                 $ObjTempVirtualServer.sourcexlatetype = $VirtualServer.sourceAddressTranslation.type
-            }
-            Catch {
+            } Catch {
                 $ObjTempVirtualServer.sourcexlatetype = "OLDVERSION"
             }
             Try {
                 $ObjTempVirtualServer.sourcexlatepool = $VirtualServer.sourceAddressTranslation.pool
-            }
-            Catch {
+            } Catch {
                 $ObjTempVirtualServer.sourcexlatepool = ""
             }
 
@@ -1582,8 +1540,7 @@ function Get-LTMInformation {
 
             if (Get-Member -inputobject $VirtualServer -name 'vlansEnabled') {
                 $ObjTempVirtualServer.vlanstate = "enabled"
-            }
-            elseif (Get-Member -inputobject $VirtualServer -name 'vlansDisabled') {
+            } elseif (Get-Member -inputobject $VirtualServer -name 'vlansDisabled') {
                 $ObjTempVirtualServer.vlanstate = "disabled"
             }
 
@@ -1609,8 +1566,7 @@ function Get-LTMInformation {
 
             $LoadBalancerObjects.VirtualServers.add($ObjTempVirtualServer.name, $ObjTempVirtualServer)
         }
-    }
-    Catch {
+    } Catch {
         $Line = $_.InvocationInfo.ScriptLineNumber
         log error "Unable to cache virtual servers from $LoadBalancerName : $_ (line $Line)"
     }
@@ -1622,14 +1578,12 @@ function Get-LTMInformation {
 
     try {
         $VirtualServerPools = $LoadBalancerObjects.VirtualServers.Values.Pools | Sort-Object -Unique
-    }
-    catch {
+    } catch {
         $VirtualServerPools = $()
     }
     try {
         $DataGroupPools = $LoadBalancerObjects.DataGroups.Values.pools | Sort-Object -Unique
-    }
-    catch {
+    } catch {
         $DataGroupPools = $()
     }
 
@@ -1694,8 +1648,7 @@ function GetDeviceInfo {
         $ts = New-TimeSpan -Minutes (120)
         $ExpirationTime = $TokenStartTime + $ts
         $Session.Headers.Add('Token-Expiration', $ExpirationTime)
-    }
-    catch {
+    } catch {
         $Line = $_.InvocationInfo.ScriptLineNumber
         log error "Error getting auth token from $LoadBalancerIP : $_ (Line $Line)"
         Exit
@@ -1730,8 +1683,7 @@ function GetDeviceInfo {
         $BaseRegistrationKey = $License.entries."https://localhost/mgmt/tm/sys/license/0".nestedStats.entries.registrationKey.description
 
         $Serial = "Z" + $BaseRegistrationKey.split("-")[-1]
-    }
-    else {
+    } else {
         $Serial = $SystemInfo.psobject.properties.value.nestedStats.entries.bigipChassisSerialNum.description
         $BoardSerial = $SystemInfo.psobject.properties.value.nestedStats.entries.hostBoardSerialNum.description
         if ($BoardSerial -ne " ") {
@@ -1782,8 +1734,7 @@ function GetDeviceInfo {
         if ($Module.level -ne "none") {
             if ($ModuleToDescription.keys -contains $Module.name) {
                 $ModuleDescription = $ModuleToDescription[$Module.name]
-            }
-            else {
+            } else {
                 $ModuleDescription = "No description found"
             }
 
@@ -1817,8 +1768,7 @@ function GetDeviceInfo {
         $StatsMsg += " ASM:" + $LoadBalancerObjects.ASMPolicies.Keys.Count
         $StatsMsg += " T:" + $($(Get-Date) - $DevStartTime).TotalSeconds
         log success $StatsMsg
-    }
-    else {
+    } else {
         log info "$BigIPHostname is not active, and won't be indexed"
         return
     }
@@ -1838,13 +1788,11 @@ Foreach ($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceG
         $ObjDeviceGroup.ips += $Device
         if ($null -eq $PollLoadBalancer) {
             $DevicesToStart += $Device
-        }
-        elseif ($Device -eq $PollLoadBalancer) {
+        } elseif ($Device -eq $PollLoadBalancer) {
             GetDeviceInfo($PollLoadBalancer)
             if ($null -eq $Location) {
                 log verbose "Testing, so not writing results"
-            }
-            else {
+            } else {
                 $Global:ReportObjects[$PollLoadBalancer] | ConvertTo-Json -Compress -Depth 10
             }
             exit
@@ -1873,8 +1821,7 @@ do {
         if ($job.HasMoreData) {
             try {
                 $lines = Receive-Job -Job $job
-            }
-            catch {
+            } catch {
                 $Line = $_.InvocationInfo.ScriptLineNumber
                 log error ("Receive-Job " + $job.name + $_ + " (line $line)")
                 $lines = $()
@@ -1886,8 +1833,7 @@ do {
                     # process contents of $obj, if log, add to global log and echo to screen, else store results.
                     if ($obj["datetime"]) {
                         log $obj.severity ($job.name + ':' + $obj.message) $obj.datetime
-                    }
-                    elseif ($obj["LoadBalancer"]) {
+                    } elseif ($obj["LoadBalancer"]) {
                         $Global:ReportObjects.add($obj.LoadBalancer.ip, $obj)
                         Foreach ($thing in ("ASMPolicies", "Certificates", "DataGroups", "iRules", "Monitors", "Pools", "VirtualServers")) {
                             if ($obj[$thing]) {
@@ -1896,12 +1842,10 @@ do {
                                 }
                             }
                         }
-                    }
-                    else {
+                    } else {
                         log error ($job.name + ':Unmatched:' + $line)
                     }
-                }
-                catch {
+                } catch {
                     $ScriptLine = $_.InvocationInfo.ScriptLineNumber
                     log error ($job.name + ':Unparsed:' + $line + " (line $ScriptLine)")
                 }
@@ -1909,11 +1853,9 @@ do {
         }
         if ($job.State -eq "Completed") {
             $completed++
-        }
-        elseif ($job.State -eq "Failed") {
+        } elseif ($job.State -eq "Failed") {
             $failed++
-        }
-        else {
+        } else {
             $running++
         }
     }
@@ -1943,8 +1885,7 @@ Function Write-JSONFile {
 
     if ($Outputlevel -ne "Verbose") {
         $JSONData = ConvertTo-Json -Compress -Depth 5 $Data
-    }
-    else {
+    } else {
         $JSONData = ConvertTo-Json -Depth 5 $Data
     }
 
@@ -1954,8 +1895,7 @@ Function Write-JSONFile {
     if (!$?) {
         log error "Failed to update the temporary pool json file"
         $Success = $false
-    }
-    else {
+    } else {
         $Success = $true
     }
 
@@ -2006,8 +1946,7 @@ Function Write-TemporaryFiles {
 
     if ($Global:Bigipreportconfig.Settings.iRules.Enabled -eq $true) {
         $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.irules -Data @($Global:Out.iRules | Sort-Object loadbalancer, name )
-    }
-    else {
+    } else {
         log verbose "iRule links disabled in config. Writing empty json object to $($Global:paths.irules + ".tmp")"
 
         $StreamWriter = New-Object System.IO.StreamWriter($($Global:paths.irules + ".tmp"), $false, $Utf8NoBomEncoding, 0x10000)
@@ -2024,8 +1963,7 @@ Function Write-TemporaryFiles {
 
     if ($Global:Bigipreportconfig.Settings.iRules.ShowDataGroupLinks -eq $true) {
         $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @( $Global:Out.DataGroups | Sort-Object loadbalancer, name )
-    }
-    else {
+    } else {
         $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @()
     }
     $StreamWriter.dispose()
@@ -2078,8 +2016,7 @@ Foreach ($DeviceGroup in $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceG
                     $MissingData = $true
                 }
             }
-        }
-        Else {
+        } Else {
             log error "$Device does not seem to have been indexed"
             $MissingData = $true
         }
@@ -2098,8 +2035,7 @@ if ($MissingData) {
         Exit
     }
     log error "Missing load balancer data, writing report anyway"
-}
-else {
+} else {
     log success "No missing loadbalancer data was detected, compiling the report"
 }
 
@@ -2254,12 +2190,10 @@ if (-not (Write-TemporaryFiles)) {
     if (Write-TemporaryFiles) {
         $TemporaryFilesWritten = $true
         log success "Successfully wrote the temporary files"
-    }
-    else {
+    } else {
         log error "Failed to write the temporary files. No report has been created/updated"
     }
-}
-else {
+} else {
     $TemporaryFilesWritten = $true
     log success "Successfully wrote the temporary files"
 }
@@ -2285,8 +2219,7 @@ if ($TemporaryFilesWritten) {
     if ($MovedFiles) {
         log success "The report has been successfully been updated"
     }
-}
-else {
+} else {
     log error "The writing of the temporary files failed, no report files will be updated"
 }
 
