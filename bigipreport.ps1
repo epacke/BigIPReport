@@ -492,12 +492,12 @@ Function Send-Errors {
 
                 Foreach ($ErrorItem in $Error) {
                     if (Get-Member -inputobject $ErrorItem -name "ScriptStackTrace") {
-                        $StackTrace = $ErrorItem.ScriptStackTrace
+                        $ScriptStackTrace = $ErrorItem.ScriptStackTrace
                         $Category = $ErrorItem.Categoryinfo.Reason
                         $LineNumber = $ErrorItem.InvocationInfo.ScriptLineNumber
                         $PositionMessage = $ErrorItem.InvocationInfo.PositionMessage
 
-                        $Errorsummary += "<tr><td>$Category</td><td>$Linenumber</td><td>$PositionMessage</td><td>$Stacktrace</td></tr>"
+                        $Errorsummary += "<tr><td>$Category</td><td>$Linenumber</td><td>$PositionMessage</td><td>$ScriptStackTrace</td></tr>"
                     }
                 }
 
