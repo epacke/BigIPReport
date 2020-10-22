@@ -2075,7 +2075,7 @@ $Global:HTML = [System.Text.StringBuilder]::new()
     </head>
     <body>
         <div class="beforedocumentready"></div>
-	<div class="bigipreportheader"><h1>BigIPReport</h1></div>
+        <div class="bigipreportheader"><h1>BigIPReport</h1></div>
         <div class="realtimestatusdiv" onclick="javascript:pollCurrentView();">
             <table>
                 <tr>
