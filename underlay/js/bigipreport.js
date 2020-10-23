@@ -1110,6 +1110,7 @@ function highlightAll(table) {
   body.unhighlight();
   const search = [table.search()];
 
+  // FIXME: highlight only in the column for each column filter instead of the entire table body
   table.columns().every(function() {
     const columnvalue = $('input', this.header()).val();
     if (columnvalue) {
@@ -1547,6 +1548,8 @@ function setupVirtualServerTable() {
 
   // Apply the search
   siteData.bigipTable.columns().every(function() {
+    // display cached column filter
+    $('input', this.header())[0].value = this.search();
     const that = this;
     $('input', this.header()).on('keyup change input search', function() {
       if (that.search() !== this.value) {
@@ -1761,6 +1764,8 @@ function setupiRuleTable() {
 
   // Apply the search
   siteData.iRuleTable.columns().every(function() {
+    // display cached column filter
+    $('input', this.header())[0].value = this.search();
     const that = this;
     $('input', this.header()).on('keyup change input search', function() {
       if (that.search() !== this.value) {
@@ -1952,6 +1957,8 @@ function setupPoolTable() {
 
   // Apply the search
   siteData.poolTable.columns().every(function() {
+    // display cached column filter
+    $('input', this.header())[0].value = this.search();
     const that = this;
     $('input', this.header()).on('keyup change input search', function() {
       if (that.search() !== this.value) {
@@ -2124,6 +2131,8 @@ function setupDataGroupTable() {
 
   // Apply the search
   siteData.dataGroupTable.columns().every(function() {
+    // display cached column filter
+    $('input', this.header())[0].value = this.search();
     const that = this;
     $('input', this.header()).on('keyup change input search', function() {
       if (that.search() !== this.value) {
@@ -2340,6 +2349,8 @@ function setupCertificateTable() {
 
   // Apply the search
   siteData.certificateTable.columns().every(function() {
+    // display cached column filter
+    $('input', this.header())[0].value = this.search();
     const that = this;
     $('input', this.header()).on('keyup change input search', function() {
       if (that.search() !== this.value) {
@@ -2473,6 +2484,8 @@ function setupLogsTable() {
 
   // Apply the search
   siteData.logTable.columns().every(function() {
+    // display cached column filter
+    $('input', this.header())[0].value = this.search();
     const that = this;
     $('input', this.header()).on('keyup change input search', function() {
       if (that.search() !== this.value) {
