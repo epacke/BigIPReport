@@ -2113,7 +2113,7 @@ $Global:HTML = [System.Text.StringBuilder]::new()
             <div class="mainsection" id="helpcontent" style="display: none;">
                 <h3>Filtering on virtual server, pool or pool member status</h3>
                 <p>This is a bit of a hidden feature. In VirtualServer, Pool, and Member columns you can filter on status.
-                The status options are &#123;enabled|disabled&#125;:&#123;available|offline|unknown&#125;.
+                The status options are {enabled|disabled}:{available|offline|unknown}.
                 For example, try searching for: "enabled:available", ":unknown" or "disabled:" as a general or field search.</p>
                 <p>It's not perfect since pools or members with any of these words in the name can also end up as results.</p>
                 <h3>Column filtering</h3>
