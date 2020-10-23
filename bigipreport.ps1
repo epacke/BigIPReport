@@ -268,6 +268,7 @@
 #
 ######################################################################################################################################
 
+[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable')]
 Param(
     $ConfigurationFile = "$PSScriptRoot/bigipreportconfig.xml",
     $PollLoadBalancer = $null,
