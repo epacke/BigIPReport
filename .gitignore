@@ -6,8 +6,9 @@
 .vscode
 dev-web
 node_modules
-underlay/*.tmp
 underlay/json/*.tmp
+underlay/json/*.gz
+underlay/json/*.bz
 underlay/json/asmpolicies.json
 underlay/json/certificates.json
 underlay/json/datagroups.json
