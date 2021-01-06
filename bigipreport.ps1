@@ -542,11 +542,6 @@ if ($null -eq $Global:Bigipreportconfig.Settings.DeviceGroups.DeviceGroup -or 0 
     $SaneConfig = $false
 }
 
-if ($null -eq $Global:Bigipreportconfig.Settings.DefaultDocument -or "" -eq $Global:Bigipreportconfig.Settings.DefaultDocument) {
-    log error "No default document configured"
-    $SaneConfig = $false
-}
-
 if ($null -eq $Global:Bigipreportconfig.Settings.LogSettings -or $null -eq $Global:Bigipreportconfig.Settings.LogSettings.Enabled) {
     log error "Mandatory fields from the LogSettings section has been removed"
     $SaneConfig = $false
@@ -684,6 +679,9 @@ $Global:Preferences['ShowiRules'] = ($Global:Bigipreportconfig.Settings.iRules.e
 $Global:Preferences['autoExpandPools'] = ($Global:Bigipreportconfig.Settings.autoExpandPools -eq $true)
 $Global:Preferences['regexSearch'] = ($Global:Bigipreportconfig.Settings.regexSearch -eq $true)
 $Global:Preferences['showAdcLinks'] = ($Global:Bigipreportconfig.Settings.showAdcLinks -eq $true)
+$Global:Preferences['scriptServer'] = $Global:hostname
+$Global:Preferences['scriptVersion'] = $Global:ScriptVersion
+$Global:Preferences['startTime'] = $StartTime
 $Global:Preferences['NavLinks'] = c@ {}
 
 if ((Get-Member -inputobject $Global:Bigipreportconfig.Settings -name 'NavLinks') -and (Get-Member -inputobject $Global:Bigipreportconfig.Settings.Navlinks -name 'NavLink')) {
@@ -730,7 +728,6 @@ $Global:DeviceGroups = @();
 
 #Build the path to the default document and json files
 $Global:paths = c@ {}
-$Global:paths.report = $Global:bigipreportconfig.Settings.ReportRoot + $Global:bigipreportconfig.Settings.Defaultdocument
 $Global:paths.preferences = $Global:bigipreportconfig.Settings.ReportRoot + "json/preferences.json"
 $Global:paths.pools = $Global:bigipreportconfig.Settings.ReportRoot + "json/pools.json"
 $Global:paths.monitors = $Global:bigipreportconfig.Settings.ReportRoot + "json/monitors.json"
@@ -1635,25 +1632,32 @@ function GetDeviceInfo {
     $Session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 
     # REST login sometimes works, and sometimes does not. Try 3 times in case it's flakey
-    try {
-        $TokenRequest = Invoke-RestMethod -WebSession $Session -SkipCertificateCheck -Headers $Headers -Method "POST" -Body $Body -Uri "https://$LoadBalancerIP/mgmt/shared/authn/login"
-        log success "Got auth token from $LoadBalancerIP"
-        $AuthToken = $TokenRequest.token.token
-        $TokenReference = $TokenRequest.token.name;
-        $TokenStartTime = Get-Date -Date $TokenRequest.token.startTime
+    $tries = 0
+    while ($tries -lt 4) {
+        try {
+            $tries++
+            $TokenRequest = Invoke-RestMethod -WebSession $Session -SkipCertificateCheck -Headers $Headers -Method "POST" -Body $Body -Uri "https://$LoadBalancerIP/mgmt/shared/authn/login"
+            log success "Got auth token from $LoadBalancerIP"
+            $AuthToken = $TokenRequest.token.token
+            $TokenReference = $TokenRequest.token.name;
+            $TokenStartTime = Get-Date -Date $TokenRequest.token.startTime
 
-        # Add the token to the session
-        $Session.Headers.Add('X-F5-Auth-Token', $AuthToken)
-        $Body = @{ timeout = 7200 } | ConvertTo-Json
+            # Add the token to the session
+            $Session.Headers.Add('X-F5-Auth-Token', $AuthToken)
+            $Body = @{ timeout = 7200 } | ConvertTo-Json
 
-        # Extend the token to 120 minutes
-        Invoke-RestMethod -WebSession $Session -Method Patch -Uri https://$LoadBalancerIP/mgmt/shared/authz/tokens/$TokenReference -Body $Body | Out-Null
-        $ts = New-TimeSpan -Minutes (120)
-        $ExpirationTime = $TokenStartTime + $ts
-        $Session.Headers.Add('Token-Expiration', $ExpirationTime)
-    } catch {
-        $Line = $_.InvocationInfo.ScriptLineNumber
-        log error "Error getting auth token from $LoadBalancerIP : $_ (Line $Line)"
+            # Extend the token to 120 minutes
+            Invoke-RestMethod -WebSession $Session -Method Patch -Uri https://$LoadBalancerIP/mgmt/shared/authz/tokens/$TokenReference -Body $Body | Out-Null
+            $ts = New-TimeSpan -Minutes (120)
+            $ExpirationTime = $TokenStartTime + $ts
+            $Session.Headers.Add('Token-Expiration', $ExpirationTime)
+            $tries = 99
+        } catch {
+            $Line = $_.InvocationInfo.ScriptLineNumber
+            log error "Error getting auth token from $LoadBalancerIP : $_ (Line $Line, Tries $tries)"
+        }
+    }
+    if ($tries -ne 99) {
         Exit
     }
 
@@ -1916,26 +1920,6 @@ Function Write-TemporaryFiles {
 
     $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 
-    log verbose "Writing $($Global:paths.report + ".tmp") from $PSScriptRoot"
-
-    $HTMLContent = $Global:HTML.ToString();
-
-    # remove whitespace from output
-    if ($Outputlevel -ne "Verbose") {
-        $HTMLContent = $HTMLContent.Split("`n").Trim() -Join "`n"
-    }
-
-    $StreamWriter = New-Object System.IO.StreamWriter($($Global:paths.report + ".tmp"), $false, $Utf8NoBomEncoding, 0x10000)
-    $StreamWriter.Write($HTMLContent)
-
-    if (!$?) {
-        log error "Failed to update the temporary report file"
-        $WriteStatuses += $false
-    }
-
-    $StreamWriter.dispose()
-
-    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.preferences -Data $Global:Preferences
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.loggederrors -Data @( $Global:LoggedErrors )
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.devicegroups -Data @( $Global:DeviceGroups | Sort-Object name )
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.loadbalancers -Data @( $Global:ReportObjects.Values.LoadBalancer | Sort-Object name )
@@ -1946,6 +1930,8 @@ Function Write-TemporaryFiles {
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.virtualservers -Data @( $Global:Out.VirtualServers | Sort-Object loadbalancer, name )
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.certificates -Data @( $Global:Out.Certificates | Sort-Object loadbalancer, fileName )
     $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.asmpolicies -Data @( $Global:Out.ASMPolicies | Sort-Object loadbalancer, name )
+    $Global:Preferences['executionTime'] = $($(Get-Date) - $StartTime).TotalMinutes
+    $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.preferences -Data $Global:Preferences
 
     if ($Global:Bigipreportconfig.Settings.iRules.Enabled -eq $true) {
         $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.irules -Data @($Global:Out.iRules | Sort-Object loadbalancer, name )
@@ -1960,16 +1946,15 @@ Function Write-TemporaryFiles {
             log error "Failed to update the temporary irules json file"
             $WriteStatuses += $false
         }
-    }
 
-    $StreamWriter.dispose()
+        $StreamWriter.dispose()
+    }
 
     if ($Global:Bigipreportconfig.Settings.iRules.ShowDataGroupLinks -eq $true) {
         $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @( $Global:Out.DataGroups | Sort-Object loadbalancer, name )
     } else {
         $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @()
     }
-    $StreamWriter.dispose()
     Return -not $( $WriteStatuses -Contains $false)
 }
 

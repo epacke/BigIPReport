@@ -19,3 +19,10 @@ DevCentral codeshare:
 * [Data tables](https://datatables.net/)
 * [jQuery hightlight plugin](http://johannburkard.de/blog/programming/javascript/highlight-javascript-text-higlighting-jquery-plugin.html)
 * [SHJS](http://shjs.sourceforge.net)
+
+# Developing Javascript
+1. Install NodeJS
+2. Run `npm install` which uses `package.json`
+4. Run `tsc --watch` which uses `tsconfig.json`
+
+The typescript files will now be transpiled and written to js folder path when changes are detected.
