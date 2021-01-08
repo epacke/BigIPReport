@@ -1,0 +1,7 @@
+version: "3.9"
+services:
+  frontend:
+    image: bigipreport/data-collection-script
+    entrypoint: pwsh -c "./bigipreport/bigipreport.ps1 -ConfigurationFile /bigipreport/bigipreport.xml -UseNativeBrotli True"
+    volumes:
+      - ".:/bigipreport"

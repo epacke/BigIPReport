@@ -20,4 +20,5 @@ underlay/json/nat.json
 underlay/json/pools.json
 underlay/json/preferences.json
 underlay/json/virtualservers.json
+underlay/json/*.json.br
 underlay/web.config

@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  frontend:
+    #image: bigipreport/frontend
+    build: containers/frontend
+    volumes:
+      - ./underlay:/usr/share/nginx/html
+    ports:
+     - "8080:80"
