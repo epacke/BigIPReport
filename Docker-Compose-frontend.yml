@@ -1,19 +1,7 @@
 version: "3.9"
 services:
-  data_collector:
-    build: 
-      context: containers/data_collector
-      dockerfile: Dockerfile
-    volumes:
-      - type: volume
-        source: .
-        target: /bigipreport
   frontend:
-    depends_on: 
-      - data_collector
-    build:
-      context: containers/nginx
-      dockerfile: Dockerfile
+    image: bigipreport/frontend
     volumes:
       - type: volume
         source: .

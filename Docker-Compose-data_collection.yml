@@ -1,13 +1,7 @@
 version: "3.9"
 services:
-  data_collector:
-    build: 
-      context: containers/data_collector
-      dockerfile: Dockerfile
+  frontend:
+    image: bigipreport/data-collection-script
+    entrypoint: pwsh -c "./bigipreport/bigipreport.ps1 -ConfigurationFile /bigipreport/bigipreport.xml -UseNativeBrotli True"
     volumes:
-      - type: volume
-        source: .
-        target: /bigipreport
-volumes:
-  underlay:
-  .:
+      - ".:/bigipreport"

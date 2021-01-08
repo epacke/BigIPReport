@@ -270,9 +270,9 @@
 
 [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable','')]
 Param(
-    $ConfigurationFile = "$PSScriptRoot/bigipreportconfig.xml",
-    $PollLoadBalancer = $null,
-    $Location = $null
+    $Global:ConfigurationFile = "$PSScriptRoot/bigipreportconfig.xml",
+    $Global:PollLoadBalancer = $null,
+    $Global:Location = $null
 )
 
 Set-StrictMode -Version Latest
@@ -305,7 +305,7 @@ if ([IO.Directory]::GetCurrentDirectory() -ne $PSScriptRoot) {
 $Global:ScriptVersion = "5.4.3"
 
 #Variable used to calculate the time used to generate the report.
-$StartTime = Get-Date
+$Global:StartTime = Get-Date
 
 $Global:hostname = [System.Net.Dns]::GetHostName()
 
@@ -599,6 +599,13 @@ if ($Global:Bigipreportconfig.Settings.iRules.Enabled -eq $true -and $Global:Big
 if ($null -eq $Global:Bigipreportconfig.Settings.RealTimeMemberStates) {
     log error "Real time member states is missing from the configuration file. Update the the latest version of the file and try again."
     $SaneConfig = $false
+}
+
+if ($null -eq $Global:Bigipreportconfig.Settings.UseNativeBrotli) {
+    log verbose "UseNativeBrotli is not present in the configuration file. Update to the latest configuration file to get rid of this message."
+    $Global:UseNativeBrotli = $false
+} else {
+    $Global:UseNativeBrotli = $Global:Bigipreportconfig.Settings.UseNativeBrotli -eq "true"
 }
 
 if ($null -eq $Global:Bigipreportconfig.Settings.ReportRoot -or $Global:Bigipreportconfig.Settings.ReportRoot -eq "") {
@@ -1955,6 +1962,11 @@ Function Write-TemporaryFiles {
     } else {
         $WriteStatuses += Write-JSONFile -DestinationFile $Global:paths.datagroups -Data @()
     }
+
+    if($Global:UseNativeBrotli) {
+        & brotli $($Global:bigipreportconfig.Settings.ReportRoot + "json/*")
+    }
+
     Return -not $( $WriteStatuses -Contains $false)
 }
 
@@ -2079,6 +2091,14 @@ if ($TemporaryFilesWritten) {
         if (!$?) {
             log error "Failed to update $path"
             $MovedFiles = $false
+        }
+
+        if($Global:UseNativeBrotli) {
+            Move-Item -Force ($path + ".tmp.br") "$path.br"
+            if (!$?) {
+                log error "Failed to update $path"
+                $MovedFiles = $false
+            }
         }
     }
 
