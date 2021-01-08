@@ -1,16 +1,9 @@
 version: "3.9"
 services:
   frontend:
-    image: bigipreport/frontend
+    #image: bigipreport/frontend
+    build: containers/frontend
     volumes:
-      - type: volume
-        source: .
-        target: /bigipreport
-        read_only: true
-      - type: volume
-        source: underlay
-        target: /usr/share/nginx/html
-        read_only: true
-volumes:
-  underlay:
-  .:
+      - ./underlay:/usr/share/nginx/html
+    ports:
+     - "8080:80"
