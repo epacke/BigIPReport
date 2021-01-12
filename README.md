@@ -3,4 +3,11 @@
 ... has been moved to [https://github.com/AllThingsDevops/BigIPReport](https://github.com/AllThingsDevops/BigIPReport)
 
 # Why this was done
-In order for my company to carry any costs associated with this project instead of me doing it I'll move the code, and costs to an organization.
+
+## Monetary reasons
+So far I've paid for things associated with BigIPReport personally.
+But the plan is to use more CI/CD so in order for my company to carry the costs instead I'm moving the project to an organization.
+
+## Organizational reasons
+With an organization it'll be easier to group repositories together.
+For example separating Docker image manifests from the actual code.
